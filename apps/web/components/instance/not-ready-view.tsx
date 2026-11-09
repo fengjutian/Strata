@@ -5,11 +5,8 @@
  */
 
 import { GOD_MODE_URL } from "@strata/constants";
-// assets
-import GradientLogo from "@/app/assets/auth/gradient-logo.webp?url";
-import GradientBgLogo from "@/app/assets/auth/gradient-bg-logo.webp?url";
 import DefaultLayout from "@/layouts/default-layout";
-import { StrataLockup } from "@strata/blocks/icons";
+import { StrataLockup, StrataLogo } from "@strata/blocks/icons";
 import { Button } from "@makestrata/propel/components/button";
 
 export function InstanceNotReady() {
@@ -17,16 +14,12 @@ export function InstanceNotReady() {
     <DefaultLayout>
       <div className="relative z-10 flex h-screen w-screen overflow-hidden">
         {/* Background decorations */}
-        <img
-          src={GradientBgLogo}
-          className="pointer-events-none absolute -top-24 -left-32 h-56 w-96 opacity-15"
-          alt=""
+        <StrataLogo
+          className="pointer-events-none absolute -top-24 -left-32 h-56 w-auto opacity-10"
           aria-hidden="true"
         />
-        <img
-          src={GradientBgLogo}
-          className="pointer-events-none absolute -right-20 -bottom-16 h-56 w-96 opacity-15"
-          alt=""
+        <StrataLogo
+          className="pointer-events-none absolute -right-20 -bottom-16 h-56 w-auto opacity-10"
           aria-hidden="true"
         />
         {/* Main content */}
@@ -36,7 +29,7 @@ export function InstanceNotReady() {
           </div>
           <div className="flex h-full w-full flex-col items-center justify-center gap-7">
             <div className="flex flex-col items-center gap-11">
-              <img src={GradientLogo} className="h-24 w-40 object-contain" alt="Strata Logo" />
+              <StrataLogo className="h-24 w-auto" />
               <div className="flex max-w-124 flex-col items-center gap-3">
                 <h1 className="text-h2-semibold text-primary">Welcome to Strata</h1>
                 <p className="text-center text-body-md-regular text-secondary">

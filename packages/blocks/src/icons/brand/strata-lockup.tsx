@@ -6,16 +6,16 @@
 
 import * as React from "react";
 
+import { STRATA_MARK_DATA_URI } from "./strata-mark-data";
+
 export type StrataLockupProps = React.ComponentPropsWithoutRef<"svg">;
 
 /**
- * Mark + "Strata" wordmark.
+ * Official Strata lockup: brand mark + "Strata" wordmark.
  *
- * The wordmark used to be outlined paths that still spelled "Plane"; it is live
- * text now so the product name reads correctly and follows the app font (Inter).
- * Replace the <text> node with official Strata letterforms once the brand
- * artwork is available — keep the 253x53 viewBox so every call site
- * (height 20 / width 95) keeps its aspect ratio.
+ * Kept as a single SVG so every call site can size it with `h-*`/`w-*` classes
+ * (the viewBox does the scaling) and colour it with `currentColor`. Replace the
+ * <text> node with official letterforms when the vector wordmark is available.
  */
 export function StrataLockup({ width = "253", height = "53", className, color = "currentColor" }: StrataLockupProps) {
   return (
@@ -23,22 +23,19 @@ export function StrataLockup({ width = "253", height = "53", className, color = 
       width={width}
       height={height}
       viewBox="0 0 253 53"
-      fill={color}
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={{ color }}
       role="img"
       aria-label="Strata"
     >
-      <path
-        d="M44.3223 2.9264C44.3223 0.754665 46.6083 -0.65811 48.5508 0.313121L80.4551 16.2653C82.9294 17.5024 84.4922 20.0321 84.4922 22.7985V48.2487C84.4922 50.4204 82.2071 51.833 80.2646 50.8619L62.3281 41.8932V22.7975C62.3281 20.0311 60.7653 17.5015 58.291 16.2643L44.3223 9.27992V2.9264ZM0 2.92543C8.01645e-05 0.753753 2.28609 -0.659069 4.22852 0.312144L22.1582 9.27699V28.3766C22.1582 31.1428 23.7213 33.6716 26.1953 34.9088L40.1699 41.8952V48.2487C40.1697 50.4202 37.8847 51.832 35.9424 50.861L4.03711 34.9088C1.56305 33.6716 0 31.1428 0 28.3766V2.92543ZM22.1582 2.92543C22.1583 0.753753 24.4443 -0.659069 26.3867 0.312144L44.3223 9.27992V28.3776C44.3223 31.1439 45.8861 33.6727 48.3604 34.9098L62.3281 41.8932V48.2487C62.3279 50.4202 60.0429 51.832 58.1006 50.861L40.1699 41.8952V22.7975C40.1699 20.0311 38.6071 17.5015 36.1328 16.2643L22.1582 9.27699V2.92543Z"
-        fill={color}
-      />
+      <image href={STRATA_MARK_DATA_URI} x="0" y="0.5" width="55" height="52" preserveAspectRatio="xMinYMid meet" />
       <text
-        x="98"
-        y="40"
-        fill={color}
+        x="66"
+        y="39.5"
+        fill="currentColor"
         fontFamily="'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
-        fontSize="41"
+        fontSize="39"
         fontWeight="600"
         letterSpacing="-1"
       >

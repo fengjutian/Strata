@@ -15,6 +15,7 @@ import { InputField } from "@makestrata/propel/components/input-field";
 import { Icon } from "@makestrata/propel/components/icon";
 import { IconButton } from "@makestrata/propel/components/icon-button";
 import { Banner } from "@makestrata/propel/components/banner";
+import { useTranslation } from "@strata/i18n";
 // local components
 import { FormHeader } from "@/components/instance/form-header";
 // hooks
@@ -49,6 +50,7 @@ const defaultFromData: TFormData = {
 };
 
 export function InstanceSignInForm() {
+  const { t } = useTranslation();
   // search params
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email") || undefined;
@@ -107,10 +109,7 @@ export function InstanceSignInForm() {
       <AuthHeader />
       <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
         <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">
-          <FormHeader
-            heading="Manage your Strata instance"
-            subHeading="Configure instance-wide settings to secure your instance"
-          />
+          <FormHeader heading={t("auth.instance_signin.heading")} subHeading={t("auth.instance_signin.description")} />
           <form
             className="space-y-4"
             method="POST"
@@ -130,14 +129,14 @@ export function InstanceSignInForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="name@company.com"
+              placeholder={t("auth.instance_signin.email_placeholder")}
               value={formData.email}
               onChange={(e) => handleFormChange("email", e.target.value)}
               autoComplete="off"
               // oxlint-disable-next-line jsx-a11y/no-autofocus -- sole primary field of a dedicated sign-in page
               autoFocus
               orientation="vertical"
-              label="Email"
+              label={t("auth.instance_signin.email")}
               required
             />
 
@@ -146,19 +145,21 @@ export function InstanceSignInForm() {
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder={t("auth.instance_signin.password_placeholder")}
               value={formData.password}
               onChange={(e) => handleFormChange("password", e.target.value)}
               autoComplete="off"
               orientation="vertical"
-              label="Password"
+              label={t("auth.instance_signin.password")}
               required
               endIcon={
                 <IconButton
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPassword ? t("auth.instance_signin.hide_password") : t("auth.instance_signin.show_password")
+                  }
                   aria-pressed={showPassword}
                   icon={<Icon icon={showPassword ? HideOutline : ShowOutline} />}
                   onClick={() => setShowPassword((visible) => !visible)}
@@ -173,7 +174,7 @@ export function InstanceSignInForm() {
                 stretch="full"
                 disabled={isButtonDisabled}
                 loading={isSubmitting}
-                label="Sign in"
+                label={t("auth.instance_signin.sign_in")}
               />
             </div>
           </form>

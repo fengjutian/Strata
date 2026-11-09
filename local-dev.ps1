@@ -292,7 +292,7 @@ function Get-PgBin {
 
 function Test-PgClusterRunning([string]$PgBin) {
     if (-not (Test-Path (Join-Path $PgData "PG_VERSION"))) { return $false }
-    $result = Invoke-NativeCapture (Join-Path $PgBin "pg_ctl.exe") @("-D", $PgData, "status")
+    $result = Invoke-NativeCapture (Join-Path $PgBin "pg_isready.exe") @("-h", "127.0.0.1", "-p", "$PgPort", "-U", $PgUser, "-d", "postgres")
     return $result.ExitCode -eq 0
 }
 
@@ -308,10 +308,44 @@ function Wait-PgReady([string]$PgBin, [int]$TimeoutSeconds = 60) {
     return $false
 }
 
-function Start-PgCluster([string]$PgBin) {
+# 强制停掉本仓库的集群：先正常停，不行再按 postmaster.pid 里的 PID 杀进程树。
+# 处理"postmaster 还在监听但已经不响应查询"的僵死状态（例如同时起了两个 postmaster）。
+function Stop-PgClusterForce([string]$PgBin) {
     $pgCtl = Join-Path $PgBin "pg_ctl.exe"
+    $null = Invoke-NativeCapture $pgCtl @("-D", $PgData, "-m", "immediate", "stop")
+    Start-Sleep -Milliseconds 700
+    if (-not (Test-Port -Port $PgPort)) {
+        Remove-Item (Join-Path $PgData "postmaster.pid") -Force -ErrorAction SilentlyContinue
+        return
+    }
+    $pidFile = Join-Path $PgData "postmaster.pid"
+    if (Test-Path $pidFile) {
+        $staleId = (Get-Content -Path $pidFile -TotalCount 1 -Encoding ascii).Trim()
+        if ($staleId -match "^\d+$") {
+            $null = Invoke-NativeCapture "taskkill.exe" @("/PID", $staleId, "/T", "/F")
+        }
+    }
+    Start-Sleep -Milliseconds 700
+    if (-not (Test-Port -Port $PgPort)) {
+        Remove-Item (Join-Path $PgData "postmaster.pid") -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Start-PgServer([string]$PgBin) {
+    $pgCtl = Join-Path $PgBin "pg_ctl.exe"
+    # 用 Start-Process 而不是 `& pg_ctl ... *> $null`：postgres 后台进程会继承
+    # pg_ctl 的输出管道，管道不关闭会把 PowerShell 卡住。也不能加 -Wait：它会
+    # 连 postgres 子进程一起等，脚本同样会挂住。所以只轮询端口。
+    $startArgs = '-D "{0}" -o "-p {1}" -l "{2}" -w start' -f $PgData, $PgPort, $PgLog
+    $null = Start-Process -FilePath $pgCtl -ArgumentList $startArgs -NoNewWindow -PassThru `
+        -RedirectStandardOutput (Join-Path $LogDir "pg-start.log") `
+        -RedirectStandardError (Join-Path $LogDir "pg-start.err.log")
+    return (Wait-Port -Port $PgPort -TimeoutSeconds 45)
+}
+
+function Start-PgCluster([string]$PgBin) {
     if ($ResetDb -and (Test-Path $PgData)) {
-        if (Test-PgClusterRunning $PgBin) { $null = Invoke-NativeCapture $pgCtl @("-D", $PgData, "-m", "immediate", "stop") }
+        if (Test-Port -Port $PgPort) { Stop-PgClusterForce $PgBin }
         Remove-Item -Path $PgData -Recurse -Force
         Write-Ok "已清空 .local\pgdata"
     }
@@ -334,24 +368,27 @@ function Start-PgCluster([string]$PgBin) {
         Write-Ok "集群已初始化"
     }
 
-    if (Test-PgClusterRunning $PgBin) {
+    if (Wait-PgReady $PgBin 2) {
         Write-Ok "PostgreSQL 已在运行（端口 $PgPort）"
     } else {
+        if (Test-Port -Port $PgPort) {
+            Write-Warn "端口 $PgPort 有监听但数据库不响应（僵死或重复启动），强制重启本地集群"
+            Stop-PgClusterForce $PgBin
+            if (Test-Port -Port $PgPort) {
+                Stop-With "端口 $PgPort 被其它程序占用。请先释放它，或改用 -PgPort 指定其它端口。"
+            }
+        }
         Write-Step "启动 PostgreSQL（端口 $PgPort）"
-        # 用 Start-Process 而不是 `& pg_ctl ... *> $null`：postgres 后台进程会继承
-        # pg_ctl 的输出管道，管道不关闭会把 PowerShell 卡住。也不能加 -Wait：它会
-        # 连 postgres 子进程一起等，脚本同样会挂住。所以只轮询端口。
-        $startArgs = '-D "{0}" -o "-p {1}" -l "{2}" -w start' -f $PgData, $PgPort, $PgLog
-        $null = Start-Process -FilePath $pgCtl -ArgumentList $startArgs -NoNewWindow -PassThru `
-            -RedirectStandardOutput (Join-Path $LogDir "pg-start.log") `
-            -RedirectStandardError (Join-Path $LogDir "pg-start.err.log")
-        if (-not (Wait-Port -Port $PgPort -TimeoutSeconds 45)) {
+        if (-not (Start-PgServer $PgBin)) {
             Stop-With "PostgreSQL 启动失败，详见 $PgLog"
         }
-    }
-
-    if (-not (Wait-PgReady $PgBin 90)) {
-        Stop-With "PostgreSQL 仍未就绪（可能卡在恢复阶段），详见 $PgLog"
+        if (-not (Wait-PgReady $PgBin 90)) {
+            Write-Warn "数据库未就绪，强制重启一次"
+            Stop-PgClusterForce $PgBin
+            if (-not (Start-PgServer $PgBin) -or -not (Wait-PgReady $PgBin 90)) {
+                Stop-With "PostgreSQL 仍无法就绪，建议重建本地集群：.\local-dev.ps1 -ResetDb（详见 $PgLog）"
+            }
+        }
     }
     Write-Ok "PostgreSQL 已就绪（端口 $PgPort）"
 
@@ -422,9 +459,13 @@ function Invoke-StopAll {
         }
     }
     $pgBin = Get-PgBin
-    if ($pgBin -and (Test-PgClusterRunning $pgBin)) {
-        $null = Invoke-NativeCapture (Join-Path $pgBin "pg_ctl.exe") @("-D", $PgData, "-m", "fast", "stop")
-        Write-Ok "PostgreSQL 已停止"
+    if ($pgBin -and (Test-Path (Join-Path $PgData "PG_VERSION"))) {
+        Stop-PgClusterForce $pgBin
+        if (-not (Test-Port -Port $PgPort)) {
+            Write-Ok "PostgreSQL 已停止"
+        } else {
+            Write-Warn "端口 $PgPort 仍被占用，可能不是本脚本启动的实例"
+        }
     }
     Write-Host ""
 }

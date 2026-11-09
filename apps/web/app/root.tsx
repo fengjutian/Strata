@@ -10,6 +10,7 @@ import type { LinksFunction } from "react-router";
 import { ThemeProvider, useTheme } from "next-themes";
 // strata imports
 import { SITE_DESCRIPTION, SITE_NAME } from "@strata/constants";
+import { DEFAULT_LANGUAGE } from "@strata/i18n";
 // types
 // assets
 import favicon16 from "@/app/assets/favicon/favicon-16x16.png?url";
@@ -55,7 +56,9 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    // `lang` starts at the instance default; `setLanguage` updates it once the
+    // profile loads or the user picks a different language.
+    <html lang={DEFAULT_LANGUAGE} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

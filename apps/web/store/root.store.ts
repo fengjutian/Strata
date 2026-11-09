@@ -6,7 +6,7 @@
 
 import { enableStaticRendering } from "mobx-react";
 // strata imports
-import { FALLBACK_LANGUAGE, setLanguage } from "@strata/i18n";
+import { DEFAULT_LANGUAGE, setLanguage } from "@strata/i18n";
 import type { IWorkItemFilterStore } from "@strata/shared-state";
 import { WorkItemFilterStore } from "@strata/shared-state";
 // strata web store
@@ -140,7 +140,8 @@ export class CoreRootStore {
   resetOnSignOut() {
     // handling the system theme when user logged out from the app
     localStorage.setItem("theme", "system");
-    void setLanguage(FALLBACK_LANGUAGE);
+    // sign-out drops the account's stored language, so return to the instance default
+    void setLanguage(DEFAULT_LANGUAGE);
     this.router = new RouterStore();
     this.commandPalette = new CommandPaletteStore();
     this.instance = new InstanceStore();

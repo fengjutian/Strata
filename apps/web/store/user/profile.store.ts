@@ -7,7 +7,7 @@
 import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 // strata imports
-import { setLanguage } from "@strata/i18n";
+import { DEFAULT_LANGUAGE, setLanguage } from "@strata/i18n";
 import type { TLanguage } from "@strata/i18n";
 // types
 import type { IUserTheme, TUserProfile } from "@strata/types";
@@ -111,9 +111,9 @@ export class ProfileStore implements IUserProfileStore {
         this.isLoading = false;
         this.data = userProfile;
       });
-      if (userProfile.language) {
-        void setLanguage(userProfile.language as TLanguage);
-      }
+      // `language` is optional on older/partial payloads; fall back to the instance default
+      // instead of leaving whatever the previous session had stored.
+      void setLanguage((userProfile.language as TLanguage) || DEFAULT_LANGUAGE);
       return userProfile;
     } catch (error) {
       runInAction(() => {

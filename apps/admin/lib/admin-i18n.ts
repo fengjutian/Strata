@@ -226,8 +226,6 @@ const ZH: Record<string, string> = {
   "Admin user does not exist.&nbsp;": "管理员用户不存在。",
   // sidebar menu + breadcrumbs
   General: "通用",
-  Email: "邮件",
-  Authentication: "认证",
   "Artificial Intelligence": "人工智能",
   "Artificial intelligence": "人工智能",
   "Images in Strata": "Strata 图片",

@@ -10,7 +10,7 @@ import { Controller, useForm } from "react-hook-form";
 // strata imports
 import { Avatar } from "@makestrata/propel/components/avatar";
 import { InputField } from "@makestrata/propel/components/input-field";
-import { useTranslation } from "@strata/i18n";
+import { DEFAULT_LANGUAGE, useTranslation } from "@strata/i18n";
 import { Button } from "@makestrata/propel/components/button";
 import { setPromiseToast, setToast } from "@strata/blocks/toast";
 import { EFileAssetType } from "@strata/types";
@@ -77,7 +77,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: user.display_name || "",
       email: user.email || "",
       role: profile.role || "Product / Project Manager",
-      language: profile.language || "en",
+      language: profile.language || DEFAULT_LANGUAGE,
       user_timezone: user.user_timezone || "Asia/Kolkata",
     },
   });

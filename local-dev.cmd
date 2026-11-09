@@ -1,8 +1,6 @@
 @echo off
-rem 一键启动 Strata 本地开发环境（不使用 Docker）。
-rem 用法：local-dev.cmd            启动
-rem       local-dev.cmd -Status    查看状态
-rem       local-dev.cmd -Stop      停止
+rem Start Strata local dev environment without Docker (see local-dev.ps1).
+rem Usage: local-dev.cmd [args]   e.g. local-dev.cmd -Status / -Stop / -ResetDb
 setlocal
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0local-dev.ps1" %*
 exit /b %ERRORLEVEL%

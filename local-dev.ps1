@@ -43,6 +43,9 @@
 .PARAMETER PgPort
     私有 PostgreSQL 集群端口，默认 55432（避开本机常见的 5432）。
 
+.PARAMETER Mirror
+    首次 uv sync 走清华 PyPI 镜像，国内网络下通常快很多。
+
 .PARAMETER ApiPort
     Django 监听端口，默认 8000。
 
@@ -63,6 +66,7 @@ param(
     [switch]$Stop,
     [switch]$Status,
     [switch]$ResetDb,
+    [switch]$Mirror,
     [switch]$SkipApi,
     [switch]$SkipFrontend,
     [string[]]$Apps = @("web", "admin", "space"),
@@ -177,6 +181,33 @@ function Save-Utf8NoBom([string]$Path, [string[]]$Lines) {
     [System.IO.File]::WriteAllText($Path, $text, (New-Object System.Text.UTF8Encoding($false)))
 }
 
+# 调用原生程序。PowerShell 5.1 在 $ErrorActionPreference = 'Stop' 时会把原生程序的
+# stderr 当成致命错误（uv、psql、pg_ctl 都会往 stderr 写正常进度），所以这里临时
+# 降级为 Continue，只用退出码判断成败。
+function Invoke-NativeCapture([string]$FilePath, [string[]]$Arguments) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & $FilePath @Arguments 2>&1
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    return @{ ExitCode = $code; Output = (($output | Out-String).Trim()) }
+}
+
+function Invoke-NativeStream([string]$FilePath, [string[]]$Arguments) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $FilePath @Arguments
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    return $code
+}
+
 function New-RandomString([int]$Length) {
     $alphabet = "abcdefghijklmnopqrstuvwxyz0123456789".ToCharArray()
     $chars = for ($i = 0; $i -lt $Length; $i++) { $alphabet | Get-Random }
@@ -227,7 +258,7 @@ function Stop-Background([string]$Name) {
     if (-not (Test-Path $pidFile)) { return }
     $processId = (Get-Content -Path $pidFile -Encoding ascii | Select-Object -First 1).Trim()
     if ($processId) {
-        & taskkill.exe /PID $processId /T /F 2>&1 | Out-Null
+        $null = Invoke-NativeCapture "taskkill.exe" @("/PID", "$processId", "/T", "/F")
     }
     Remove-Item -Path $pidFile -Force -ErrorAction SilentlyContinue
 }
@@ -261,14 +292,26 @@ function Get-PgBin {
 
 function Test-PgClusterRunning([string]$PgBin) {
     if (-not (Test-Path (Join-Path $PgData "PG_VERSION"))) { return $false }
-    & (Join-Path $PgBin "pg_ctl.exe") -D $PgData status *> $null
-    return $LASTEXITCODE -eq 0
+    $result = Invoke-NativeCapture (Join-Path $PgBin "pg_ctl.exe") @("-D", $PgData, "status")
+    return $result.ExitCode -eq 0
+}
+
+# 端口可连通 ≠ 数据库可用：postmaster 会先监听、再做崩溃恢复，这期间连接会报
+# "the database system is starting up"。必须用 pg_isready 轮询到真正可接受连接。
+function Wait-PgReady([string]$PgBin, [int]$TimeoutSeconds = 60) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $result = Invoke-NativeCapture (Join-Path $PgBin "pg_isready.exe") @("-h", "127.0.0.1", "-p", "$PgPort", "-U", $PgUser, "-d", "postgres")
+        if ($result.ExitCode -eq 0) { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
 }
 
 function Start-PgCluster([string]$PgBin) {
     $pgCtl = Join-Path $PgBin "pg_ctl.exe"
     if ($ResetDb -and (Test-Path $PgData)) {
-        if (Test-PgClusterRunning $PgBin) { & $pgCtl -D $PgData -m immediate stop *> $null }
+        if (Test-PgClusterRunning $PgBin) { $null = Invoke-NativeCapture $pgCtl @("-D", $PgData, "-m", "immediate", "stop") }
         Remove-Item -Path $PgData -Recurse -Force
         Write-Ok "已清空 .local\pgdata"
     }
@@ -279,12 +322,14 @@ function Start-PgCluster([string]$PgBin) {
         $pwFile = Join-Path $LocalDir "pg-init-password.txt"
         Set-Content -Path $pwFile -Value $PgPassword -NoNewline -Encoding ascii
         try {
-            & (Join-Path $PgBin "initdb.exe") -D $PgData -U $PgUser -A scram-sha-256 "--pwfile=$pwFile" -E UTF8 "--locale=C" *> $null
+            $init = Invoke-NativeCapture (Join-Path $PgBin "initdb.exe") @(
+                "-D", $PgData, "-U", $PgUser, "-A", "scram-sha-256", "--pwfile=$pwFile", "-E", "UTF8", "--locale=C"
+            )
         } finally {
             Remove-Item -Path $pwFile -Force -ErrorAction SilentlyContinue
         }
-        if ($LASTEXITCODE -ne 0) {
-            Stop-With "initdb 失败。可改用已有数据库：.\local-dev.ps1 -DatabaseUrl `"postgresql://user:pass@127.0.0.1:5432/strata`""
+        if ($init.ExitCode -ne 0) {
+            Stop-With "initdb 失败：$($init.Output)`n可改用已有数据库：.\local-dev.ps1 -DatabaseUrl `"postgresql://user:pass@127.0.0.1:5432/strata`""
         }
         Write-Ok "集群已初始化"
     }
@@ -303,15 +348,22 @@ function Start-PgCluster([string]$PgBin) {
         if (-not (Wait-Port -Port $PgPort -TimeoutSeconds 45)) {
             Stop-With "PostgreSQL 启动失败，详见 $PgLog"
         }
-        Write-Ok "PostgreSQL 已启动"
     }
+
+    if (-not (Wait-PgReady $PgBin 90)) {
+        Stop-With "PostgreSQL 仍未就绪（可能卡在恢复阶段），详见 $PgLog"
+    }
+    Write-Ok "PostgreSQL 已就绪（端口 $PgPort）"
 
     $env:PGPASSWORD = $PgPassword
     try {
-        $exists = (& (Join-Path $PgBin "psql.exe") -h 127.0.0.1 -p $PgPort -U $PgUser -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$PgDatabase'") -join ""
-        if ($exists.Trim() -ne "1") {
-            & (Join-Path $PgBin "createdb.exe") -h 127.0.0.1 -p $PgPort -U $PgUser $PgDatabase *> $null
-            if ($LASTEXITCODE -ne 0) { Stop-With "创建数据库 $PgDatabase 失败" }
+        $psql = Join-Path $PgBin "psql.exe"
+        $exists = Invoke-NativeCapture $psql @("-h", "127.0.0.1", "-p", "$PgPort", "-U", $PgUser, "-d", "postgres", "-tAc", "SELECT 1 FROM pg_database WHERE datname = '$PgDatabase'")
+        if ($exists.Output.Trim() -ne "1") {
+            $created = Invoke-NativeCapture (Join-Path $PgBin "createdb.exe") @("-h", "127.0.0.1", "-p", "$PgPort", "-U", $PgUser, $PgDatabase)
+            if ($created.ExitCode -ne 0 -and $created.Output -notmatch "already exists") {
+                Stop-With "创建数据库 $PgDatabase 失败：$($created.Output)"
+            }
             Write-Ok "数据库 $PgDatabase 已创建"
         } else {
             Write-Ok "数据库 $PgDatabase 已存在"
@@ -371,7 +423,7 @@ function Invoke-StopAll {
     }
     $pgBin = Get-PgBin
     if ($pgBin -and (Test-PgClusterRunning $pgBin)) {
-        & (Join-Path $pgBin "pg_ctl.exe") -D $PgData -m fast stop *> $null
+        $null = Invoke-NativeCapture (Join-Path $pgBin "pg_ctl.exe") @("-D", $PgData, "-m", "fast", "stop")
         Write-Ok "PostgreSQL 已停止"
     }
     Write-Host ""
@@ -523,26 +575,41 @@ if (-not $SkipApi) {
     }
 
     Write-Step "安装 Python 依赖（uv sync，首次可能较慢）"
+    if ($Mirror -and -not $env:UV_DEFAULT_INDEX) {
+        $env:UV_DEFAULT_INDEX = "https://pypi.tuna.tsinghua.edu.cn/simple"
+        Write-Ok "使用 PyPI 镜像：$env:UV_DEFAULT_INDEX"
+    }
     Push-Location $ApiDir
     try {
-        & $uv sync --python 3.12
-        if ($LASTEXITCODE -ne 0) { Stop-With "uv sync 失败（需要能访问 PyPI）" }
+        if ((Invoke-NativeStream $uv @("sync", "--python", "3.12")) -ne 0) {
+            Stop-With "uv sync 失败（需要能访问 PyPI；网络慢可先设 `$env:UV_DEFAULT_INDEX）"
+        }
         Write-Ok "依赖就绪"
 
         Write-Step "应用数据库迁移"
-        & $uv run python manage.py migrate --noinput "--settings=$SettingsModule"
-        if ($LASTEXITCODE -ne 0) { Stop-With "数据库迁移失败，详见上方输出" }
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "migrate", "--noinput", "--settings=$SettingsModule")) -ne 0) {
+            Stop-With "数据库迁移失败，详见上方输出"
+        }
         Write-Ok "迁移完成"
 
         Write-Step "初始化实例"
         Import-DotEnv $ApiEnv
-        & $uv run python manage.py register_instance "local-native" "--settings=$SettingsModule" *> $null
-        if ($LASTEXITCODE -eq 0) { Write-Ok "实例已注册" } else { Write-Warn "实例注册跳过（可忽略）" }
-        & $uv run python manage.py configure_instance "--settings=$SettingsModule" *> $null
-        if ($LASTEXITCODE -eq 0) { Write-Ok "实例配置完成" } else { Write-Warn "实例配置跳过（可忽略）" }
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "register_instance", "local-native", "--settings=$SettingsModule")) -eq 0) {
+            Write-Ok "实例已注册"
+        } else {
+            Write-Warn "实例注册跳过（可忽略）"
+        }
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "configure_instance", "--settings=$SettingsModule")) -eq 0) {
+            Write-Ok "实例配置完成"
+        } else {
+            Write-Warn "实例配置跳过（可忽略）"
+        }
         if ($useMinio) {
-            & $uv run python manage.py create_bucket "--settings=$SettingsModule" *> $null
-            if ($LASTEXITCODE -eq 0) { Write-Ok "对象存储 bucket 就绪" } else { Write-Warn "bucket 创建失败（附件上传可能不可用）" }
+            if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "create_bucket", "--settings=$SettingsModule")) -eq 0) {
+                Write-Ok "对象存储 bucket 就绪"
+            } else {
+                Write-Warn "bucket 创建失败（附件上传可能不可用）"
+            }
         }
     } finally {
         Pop-Location
@@ -573,8 +640,7 @@ if (-not $SkipFrontend) {
         Write-Step "安装前端依赖（pnpm install）"
         Push-Location $Root
         try {
-            & $pnpm install
-            if ($LASTEXITCODE -ne 0) { Stop-With "pnpm install 失败" }
+            if ((Invoke-NativeStream $pnpm @("install")) -ne 0) { Stop-With "pnpm install 失败" }
         } finally {
             Pop-Location
         }

@@ -14,6 +14,7 @@
 | `pnpm fix`                                    | 自动修复格式与 lint 问题                 |
 | `pnpm --filter web test`                      | 跑 web 应用的单元测试（vitest）          |
 | `pnpm turbo run <command> --filter=<package>` | 只针对某个包/应用执行                    |
+| `.\local-dev.cmd`                             | 无 Docker 本地启动全套环境（Windows）    |
 
 ## 仓库结构
 
@@ -86,6 +87,7 @@ packages/
 - `pnpm fix` - Auto-fix format and lint issues
 - `pnpm --filter web test` - Run the web unit tests (vitest)
 - `pnpm turbo run <command> --filter=<package>` - Target specific package/app
+- `.\local-dev.cmd` - Start the full stack without Docker (Windows)
 
 ## Repository layout
 

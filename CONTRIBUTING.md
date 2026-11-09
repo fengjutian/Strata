@@ -83,6 +83,44 @@ pnpm dev
 
 到这里就可以开始写代码了。如果改动没有自动热更新，刷新一下浏览器。祝你贡献愉快！🎉
 
+### 不使用 Docker 运行（Windows）
+
+本机跑不了 Docker，或者不想为开发环境留出 12 GB 内存时，可以用仓库根目录的 `local-dev.cmd` 起一套纯本地环境：
+
+```powershell
+.\local-dev.cmd             # 启动：生成 .env、初始化私有数据库、uv sync、起 API 与前端
+.\local-dev.cmd -Status     # 查看状态
+.\local-dev.cmd -Stop       # 全部停止
+.\local-dev.cmd -ResetDb    # 删除并重建本地数据库
+```
+
+它不需要 Docker，也不需要先跑 `setup.sh`：脚本会直接用本机已安装的 PostgreSQL 二进制（`initdb.exe`、`pg_ctl.exe`、`psql.exe`）在 `.local\pgdata` 初始化一个独立集群，监听 **55432**，不碰你机器上已有的 5432 服务，也不需要那套服务的密码。数据、日志、进程号都在 `.local\` 下，已加入 `.gitignore`。
+
+前置条件：Windows、PowerShell 5.1+、Node.js 22.22+、pnpm、[uv](https://docs.astral.sh/uv/) 0.12.21，以及本机安装的 PostgreSQL 15+（只用到它的命令行工具）。
+
+常用参数：
+
+- `-Apps web,admin` —— 只启动指定前端（默认 `web`、`admin`、`space`，`live` 需要 Redis）；
+- `-SkipFrontend` / `-SkipApi` —— 只起后端 / 只起前端；
+- `-DatabaseUrl "postgresql://user:pass@host:5432/strata"` —— 用已有数据库替代私有集群。
+
+与 Docker 方式的差异：
+
+| 能力     | Docker 方式            | `local-dev.cmd`                                                                          |
+| -------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| 数据库   | 容器内 PostgreSQL 15.7 | 本机 PostgreSQL 私有集群（55432）                                                        |
+| Redis    | Valkey 容器            | 可选：PATH 或 `.local\bin\` 下有 `redis-server.exe` 就自动启动，否则缓存降级为进程内缓存 |
+| 对象存储 | MinIO 容器             | 可选：有 `minio.exe` 就自动启动，否则附件上传不可用                                      |
+| 后台任务 | worker + beat 容器     | 不执行（Celery 走 `memory://`）                                                          |
+
+首次 `uv sync` 要下载 123 个 Python 包，国内网络建议加 `-Mirror`（走清华 PyPI 镜像）：
+
+```powershell
+.\local-dev.cmd -Mirror
+```
+
+启动完成后浏览器打开 <http://localhost:3001/god-mode/> 注册实例管理员，再用同一账号登录 <http://localhost:3000>。
+
 ## 缺了某个功能？
 
 如果缺少你想要的功能，可以直接在[这里](https://github.com/makestrata/strata/issues/new?assignees=&labels=feature&template=feature_request.yml&title=%F0%9F%9A%80+Feature%3A+)提需求，也可以在 GitHub 仓库里选择「🚀 Feature」新建 [Issue](https://github.com/makestrata/strata/issues/new/choose)。
@@ -328,6 +366,40 @@ pnpm dev
 6. Open <http://localhost:3000> and log in using the same credentials
 
 That's it! Remember to refresh your browser if changes don't auto-reload. Happy contributing! 🎉
+
+### Running without Docker (Windows)
+
+If Docker is unavailable — or you would rather not reserve 12 GB of RAM for it — the `local-dev.cmd` script at the repo root boots the whole stack natively:
+
+```powershell
+.\local-dev.cmd             # generate .env, init the private database, uv sync, start API + web apps
+.\local-dev.cmd -Status     # show what is running
+.\local-dev.cmd -Stop       # stop everything
+.\local-dev.cmd -ResetDb    # drop and recreate the local database
+```
+
+It needs neither Docker nor a prior `setup.sh`: the script uses the PostgreSQL binaries already installed on the machine (`initdb.exe`, `pg_ctl.exe`, `psql.exe`) to create a private cluster in `.local\pgdata` listening on **55432**, so your existing 5432 server and its credentials are left untouched. Data, logs and PID files live under `.local\`, which is gitignored.
+
+Requirements: Windows, PowerShell 5.1+, Node.js 22.22+, pnpm, [uv](https://docs.astral.sh/uv/) 0.12.21, and a local PostgreSQL 15+ install (only its CLI tools are used).
+
+Options: `-Apps web,admin` limits the front ends (default `web`, `admin`, `space`); `-SkipFrontend` / `-SkipApi` start only one side; `-DatabaseUrl "postgresql://user:pass@host:5432/strata"` reuses an existing database instead of the private cluster.
+
+Differences from the Docker setup:
+
+| Capability      | Docker                    | `local-dev.cmd`                                                                                                      |
+| --------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Database        | PostgreSQL 15.7 container | private local cluster on 55432                                                                                       |
+| Redis           | Valkey container          | optional; auto-started when `redis-server.exe` is on PATH or in `.local\bin\`, otherwise an in-process cache is used |
+| Object storage  | MinIO container           | optional; auto-started when `minio.exe` is available, otherwise uploads are unavailable                              |
+| Background jobs | worker + beat containers  | not executed (Celery uses `memory://`)                                                                               |
+
+The first `uv sync` downloads 123 Python packages; add `-Mirror` to use the Tsinghua PyPI mirror:
+
+```powershell
+.\local-dev.cmd -Mirror
+```
+
+Then open <http://localhost:3001/god-mode/> to register the instance admin and log in at <http://localhost:3000>.
 
 ## Missing a Feature?
 

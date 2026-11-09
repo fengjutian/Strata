@@ -24,6 +24,24 @@ import type { TProject } from "@strata/types";
 import { ProjectAttributes } from "./attributes";
 import { getProjectFormValues } from "./utils";
 
+/**
+ * Pulls a human readable reason out of whatever the upload chain threw.
+ * `FileService` rethrows `error.response.data`, so the value is often a plain object
+ * (or `undefined` for network failures) rather than an `Error`.
+ */
+const getCoverUploadErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object") {
+    const payload = error as Record<string, unknown>;
+    for (const key of ["error", "detail", "message"]) {
+      const value = payload[key];
+      if (typeof value === "string" && value.trim()) return value;
+    }
+  }
+  return "Cover image upload failed";
+};
+
 export type TCreateProjectFormProps = {
   setToFavorite?: boolean;
   workspaceSlug: string;
@@ -80,13 +98,17 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
             isUserAsset: false,
           });
         } catch (error) {
-          console.error("Error uploading cover image:", error);
+          // The cover is decoration: a failed upload (no object storage in local dev, S3/CORS
+          // misconfiguration, ...) must not block project creation. Fall back to the static
+          // cover URL, which the project can render directly, and surface the reason.
+          console.warn("Cover image upload failed; creating the project with the static cover URL.", error);
           setToast({
-            type: "error",
-            title: t("toast.error"),
-            message: error instanceof Error ? error.message : "Failed to upload cover image",
+            type: "warning",
+            title: t("cover_image"),
+            message: getCoverUploadErrorMessage(error),
           });
-          return Promise.reject(error);
+          formData.cover_image = coverImage;
+          formData.cover_image_asset = null;
         }
       } else {
         formData.cover_image = coverImage;

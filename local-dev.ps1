@@ -196,16 +196,28 @@ function Invoke-NativeCapture([string]$FilePath, [string[]]$Arguments) {
     return @{ ExitCode = $code; Output = (($output | Out-String).Trim()) }
 }
 
-function Invoke-NativeStream([string]$FilePath, [string[]]$Arguments) {
+function Invoke-NativeStream([string]$FilePath, [string[]]$Arguments, [string]$LogPath = $null) {
     $previous = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        & $FilePath @Arguments
-        $code = $LASTEXITCODE
+        if ($LogPath) {
+            & $FilePath @Arguments 2>&1 | Tee-Object -FilePath $LogPath | ForEach-Object { Write-Host $_ }
+            $code = $LASTEXITCODE
+        } else {
+            & $FilePath @Arguments
+            $code = $LASTEXITCODE
+        }
     } finally {
         $ErrorActionPreference = $previous
     }
     return $code
+}
+
+function Write-LogTail([string]$Path, [int]$LineCount = 25) {
+    if (-not (Test-Path $Path)) { return }
+    $tail = Get-Content -Path $Path -Encoding utf8 -Tail $LineCount
+    Write-Host "  ---- $([IO.Path]::GetFileName($Path)) 最后 $LineCount 行 ----" -ForegroundColor DarkGray
+    foreach ($line in $tail) { Write-Host "  $line" -ForegroundColor DarkGray }
 }
 
 function New-RandomString([int]$Length) {
@@ -622,31 +634,37 @@ if (-not $SkipApi) {
     }
     Push-Location $ApiDir
     try {
-        if ((Invoke-NativeStream $uv @("sync", "--python", "3.12")) -ne 0) {
-            Stop-With "uv sync 失败（需要能访问 PyPI；网络慢可先设 `$env:UV_DEFAULT_INDEX）"
+        $syncLog = Join-Path $LogDir "uv-sync.log"
+        if ((Invoke-NativeStream $uv @("sync", "--python", "3.12") $syncLog) -ne 0) {
+            Write-LogTail $syncLog 25
+            Stop-With "uv sync 失败（需要能访问 PyPI；网络慢可加 -Mirror）"
         }
         Write-Ok "依赖就绪"
 
         Write-Step "应用数据库迁移"
-        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "migrate", "--noinput", "--settings=$SettingsModule")) -ne 0) {
-            Stop-With "数据库迁移失败，详见上方输出"
+        $migrateLog = Join-Path $LogDir "migrate.log"
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "migrate", "--noinput", "--settings=$SettingsModule") $migrateLog) -ne 0) {
+            Write-LogTail $migrateLog 40
+            Stop-With "数据库迁移失败，见上方 migrate.log 尾部"
         }
         Write-Ok "迁移完成"
 
         Write-Step "初始化实例"
         Import-DotEnv $ApiEnv
-        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "register_instance", "local-native", "--settings=$SettingsModule")) -eq 0) {
+        $instanceLog = Join-Path $LogDir "instance.log"
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "register_instance", "local-native", "--settings=$SettingsModule") $instanceLog) -eq 0) {
             Write-Ok "实例已注册"
         } else {
             Write-Warn "实例注册跳过（可忽略）"
         }
-        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "configure_instance", "--settings=$SettingsModule")) -eq 0) {
+        if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "configure_instance", "--settings=$SettingsModule") $instanceLog) -eq 0) {
             Write-Ok "实例配置完成"
         } else {
             Write-Warn "实例配置跳过（可忽略）"
         }
         if ($useMinio) {
-            if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "create_bucket", "--settings=$SettingsModule")) -eq 0) {
+            $bucketLog = Join-Path $LogDir "bucket.log"
+            if ((Invoke-NativeStream $uv @("run", "python", "manage.py", "create_bucket", "--settings=$SettingsModule") $bucketLog) -eq 0) {
                 Write-Ok "对象存储 bucket 就绪"
             } else {
                 Write-Warn "bucket 创建失败（附件上传可能不可用）"
@@ -681,7 +699,7 @@ if (-not $SkipFrontend) {
         Write-Step "安装前端依赖（pnpm install）"
         Push-Location $Root
         try {
-            if ((Invoke-NativeStream $pnpm @("install")) -ne 0) { Stop-With "pnpm install 失败" }
+            if ((Invoke-NativeStream $pnpm @("install") (Join-Path $LogDir "pnpm-install.log")) -ne 0) { Stop-With "pnpm install 失败" }
         } finally {
             Pop-Location
         }

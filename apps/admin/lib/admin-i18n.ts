@@ -224,6 +224,23 @@ const ZH: Record<string, string> = {
   "Admin user already exists.&nbsp;": "管理员用户已存在。",
   "Admin user does not exist.": "管理员用户不存在。",
   "Admin user does not exist.&nbsp;": "管理员用户不存在。",
+  // sidebar menu + breadcrumbs
+  "General": "通用",
+  "Email": "邮件",
+  "Authentication": "认证",
+  "Artificial Intelligence": "人工智能",
+  "Artificial intelligence": "人工智能",
+  "Images in Strata": "Strata 图片",
+  "Image": "图片",
+  "Workspace": "工作区",
+  "Workspaces": "工作区",
+  "Create": "创建",
+  "Identify your instances and get key details.": "查看实例标识与关键信息。",
+  "Configure your SMTP controls.": "配置 SMTP 邮件发送。",
+  "Manage all workspaces on this instance.": "管理此实例上的所有工作区。",
+  "Configure authentication modes.": "配置认证方式。",
+  "Configure your OpenAI creds.": "配置 OpenAI 凭据。",
+  "Allow third-party image libraries.": "允许使用第三方图库。",
 };
 
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();

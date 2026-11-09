@@ -52,7 +52,7 @@ const generateBreadcrumbItems = (pathname: string) => {
   const breadcrumbItems = pathSegments.map((segment) => {
     currentUrl += "/" + segment;
     return {
-      title: HEADER_SEGMENT_LABELS[segment] ?? segment.toUpperCase(),
+      title: tr(HEADER_SEGMENT_LABELS[segment] ?? segment.toUpperCase()),
       href: currentUrl,
     };
   });

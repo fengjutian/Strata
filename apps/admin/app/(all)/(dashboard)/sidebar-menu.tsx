@@ -46,12 +46,12 @@ function AdminSidebarMenuItem(props: TAdminSidebarMenuItemProps) {
         />
       }
     >
-      <Tooltip label={isCollapsed ? item.name : item.description} side="right">
+      <Tooltip label={isCollapsed ? tr(item.name) : tr(item.description)} side="right">
         <ListItemLink
           href={href}
-          label={isCollapsed ? "" : item.name}
+          label={isCollapsed ? "" : tr(item.name)}
           startIcon={<Icon icon={item.Icon} />}
-          aria-label={item.name}
+          aria-label={tr(item.name)}
           aria-current={isActive ? "page" : undefined}
           onClick={(event) => {
             handleLinkClick(event as MouseEvent<HTMLAnchorElement>);

@@ -1,0 +1,90 @@
+# Copyright (c) 2023-present Strata Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
+"""Development settings"""
+
+import os
+
+from .common import *  # noqa
+
+DEBUG = os.environ.get("DEBUG", "1") == "1"
+
+# Debug Toolbar settings (set DEBUG=0 to skip its per-request SQL/panel instrumentation)
+if DEBUG:
+    INSTALLED_APPS += ("debug_toolbar",)  # noqa
+    MIDDLEWARE += ("debug_toolbar.middleware.DebugToolbarMiddleware",)  # noqa
+
+    DEBUG_TOOLBAR_PATCH_SETTINGS = False
+
+# Only show emails in console don't send it to smtp
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,  # noqa
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
+
+INTERNAL_IPS = ("127.0.0.1",)
+
+MEDIA_URL = "/uploads/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "uploads")  # noqa
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")  # noqa
+
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "json": {
+            "()": "pythonjsonlogger.json.JsonFormatter",
+            "fmt": "%(levelname)s %(asctime)s %(module)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        }
+    },
+    "loggers": {
+        "strata.api.request": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "strata.api": {"level": "INFO", "handlers": ["console"], "propagate": False},
+        "strata.worker": {"level": "INFO", "handlers": ["console"], "propagate": False},
+        "strata.exception": {
+            "level": "ERROR",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "strata.external": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "strata.authentication": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+        "strata.migrations": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+    },
+}

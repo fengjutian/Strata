@@ -1,0 +1,51 @@
+/**
+ * Copyright (c) 2023-present Strata Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { observer } from "mobx-react";
+import { ChatOutline } from "@makestrata/propel/icons";
+// strata imports
+import { useTranslation } from "@strata/i18n";
+import { setToast } from "@strata/blocks/toast";
+// store
+import type { INotification } from "@/store/notifications/notification";
+// local imports
+import { NotificationItemOptionButton } from "./button";
+
+type TNotificationItemReadOption = {
+  workspaceSlug: string;
+  notification: INotification;
+};
+
+export const NotificationItemReadOption = observer(function NotificationItemReadOption(
+  props: TNotificationItemReadOption
+) {
+  const { workspaceSlug, notification } = props;
+  // hooks
+  const { asJson: data, markNotificationAsRead, markNotificationAsUnRead } = notification;
+  const { t } = useTranslation();
+
+  const handleNotificationUpdate = async () => {
+    try {
+      const request = data.read_at ? markNotificationAsUnRead : markNotificationAsRead;
+      await request(workspaceSlug);
+      setToast({
+        title: data.read_at ? t("notification.toasts.unread") : t("notification.toasts.read"),
+        type: "success",
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <NotificationItemOptionButton
+      tooltipContent={data.read_at ? t("notification.options.mark_unread") : t("notification.options.mark_read")}
+      callBack={handleNotificationUpdate}
+    >
+      <ChatOutline className="size-4 text-icon-secondary" />
+    </NotificationItemOptionButton>
+  );
+});

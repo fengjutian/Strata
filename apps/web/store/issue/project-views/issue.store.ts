@@ -1,0 +1,160 @@
+/**
+ * Copyright (c) 2023-present Strata Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { action, makeObservable } from "mobx";
+// base class
+import type {
+  TIssue,
+  TLoader,
+  ViewFlags,
+  IssuePaginationOptions,
+  TIssuesResponse,
+  TBulkOperationsPayload,
+} from "@strata/types";
+// services
+// types
+import type { IBaseIssuesStore } from "../helpers/base-issues.store";
+import { BaseIssuesStore } from "../helpers/base-issues.store";
+import { fetchIssuePage, fetchNextIssuePage } from "../helpers/issue-list-fetch";
+import type { IIssueRootStore } from "../root.store";
+import type { IProjectViewIssuesFilter } from "./filter.store";
+
+export interface IProjectViewIssues extends IBaseIssuesStore {
+  viewFlags: ViewFlags;
+  // actions
+  fetchIssues: (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    loadType: TLoader,
+    options: IssuePaginationOptions
+  ) => Promise<TIssuesResponse | undefined>;
+  fetchIssuesWithExistingPagination: (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    loadType: TLoader
+  ) => Promise<TIssuesResponse | undefined>;
+  fetchNextIssues: (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    groupId?: string,
+    subGroupId?: string
+  ) => Promise<TIssuesResponse | undefined>;
+
+  createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
+  quickAddIssue: (workspaceSlug: string, projectId: string, data: TIssue) => Promise<TIssue | undefined>;
+  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
+  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
+  bulkUpdateProperties: (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => Promise<void>;
+}
+
+export class ProjectViewIssues extends BaseIssuesStore implements IProjectViewIssues {
+  viewFlags = {
+    enableQuickAdd: true,
+    enableIssueCreation: true,
+    enableInlineEditing: true,
+  };
+  //filter store
+  issueFilterStore: IProjectViewIssuesFilter;
+
+  constructor(_rootStore: IIssueRootStore, issueFilterStore: IProjectViewIssuesFilter) {
+    super(_rootStore, issueFilterStore);
+    makeObservable(this, {
+      // action
+      fetchIssues: action,
+      fetchNextIssues: action,
+      fetchIssuesWithExistingPagination: action,
+    });
+    //filter store
+    this.issueFilterStore = issueFilterStore;
+  }
+
+  fetchParentStats = async () => {};
+
+  /** */
+  updateParentStats = () => {};
+
+  /**
+   * This method is called to fetch the first issues of pagination
+   * @param workspaceSlug
+   * @param projectId
+   * @param loadType
+   * @param options
+   * @returns
+   */
+  fetchIssues = async (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    loadType: TLoader,
+    options: IssuePaginationOptions,
+    isExistingPaginationOptions: boolean = false
+  ) =>
+    fetchIssuePage(this, {
+      workspaceSlug,
+      projectId,
+      scopeId: viewId,
+      loadType,
+      options,
+      isExistingPaginationOptions,
+      load: (params) =>
+        this.issueService.getIssues(workspaceSlug, projectId, params, { signal: this.controller.signal }),
+    });
+
+  /**
+   * This method is called subsequent pages of pagination
+   * if groupId/subgroupId is provided, only that specific group's next page is fetched
+   * else all the groups' next page is fetched
+   * @param workspaceSlug
+   * @param projectId
+   * @param groupId
+   * @param subGroupId
+   * @returns
+   */
+  fetchNextIssues = async (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    groupId?: string,
+    subGroupId?: string
+  ) =>
+    fetchNextIssuePage(this, {
+      workspaceSlug,
+      projectId,
+      scopeId: viewId,
+      groupId,
+      subGroupId,
+      load: (params) => this.issueService.getIssues(workspaceSlug, projectId, params),
+    });
+
+  /**
+   * This Method exists to fetch the first page of the issues with the existing stored pagination
+   * This is useful for refetching when filters, groupBy, orderBy etc changes
+   * @param workspaceSlug
+   * @param projectId
+   * @param loadType
+   * @returns
+   */
+  fetchIssuesWithExistingPagination = async (
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    loadType: TLoader
+  ) => {
+    if (!this.paginationOptions) return;
+    return await this.fetchIssues(workspaceSlug, projectId, viewId, loadType, this.paginationOptions, true);
+  };
+
+  // Using aliased names as they cannot be overridden in other stores
+  archiveBulkIssues = this.bulkArchiveIssues;
+  quickAddIssue = this.issueQuickAdd;
+  updateIssue = this.issueUpdate;
+  archiveIssue = this.issueArchive;
+}

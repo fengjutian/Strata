@@ -1,0 +1,7 @@
+{
+  "name": "strata-api",
+  "version": "1.5.0",
+  "private": true,
+  "description": "API server powering Strata's backend",
+  "license": "AGPL-3.0"
+}

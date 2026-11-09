@@ -1,0 +1,36 @@
+services:
+  web:
+    image: ${DOCKERHUB_USER:-local}/strata-frontend:${APP_RELEASE:-latest}
+    build:
+      context: ../../
+      dockerfile: apps/web/Dockerfile.web
+
+  space:
+    image: ${DOCKERHUB_USER:-local}/strata-space:${APP_RELEASE:-latest}
+    build:
+      context: ../../
+      dockerfile: apps/space/Dockerfile.space
+
+  admin:
+    image: ${DOCKERHUB_USER:-local}/strata-admin:${APP_RELEASE:-latest}
+    build:
+      context: ../../
+      dockerfile: apps/admin/Dockerfile.admin
+
+  live:
+    image: ${DOCKERHUB_USER:-local}/strata-live:${APP_RELEASE:-latest}
+    build:
+      context: ../../
+      dockerfile: apps/live/Dockerfile.live
+
+  api:
+    image: ${DOCKERHUB_USER:-local}/strata-backend:${APP_RELEASE:-latest}
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile.api
+
+  proxy:
+    image: ${DOCKERHUB_USER:-local}/strata-proxy:${APP_RELEASE:-latest}
+    build:
+      context: ../../apps/proxy
+      dockerfile: Dockerfile.ce

@@ -1,7 +1,6 @@
-<p align="center">
-  <b>Strata</b><br />
-  面向所有团队的开源项目管理工具
-</p>
+<h1 align="center">Strata</h1>
+
+<p align="center">面向所有团队的开源项目管理工具</p>
 
 <p align="center">
   <b>简体中文</b> · <a href="#english">English</a>
@@ -167,7 +166,7 @@ docker compose -f docker-compose-test.yml run --rm --build api-tests pytest -m u
 docker compose -f docker-compose-test.yml down -v
 ```
 
-更多细节见 [apps/api/tests/RUNNING_TESTS.md](./apps/api/tests/RUNNING_TESTS.md) 和 [apps/api/tests/TESTING_GUIDE.md](./apps/api/tests/TESTING_GUIDE.md)。
+更多细节见 [apps/api/tests/RUNNING_TESTS.md](./apps/api/tests/RUNNING_TESTS.md)。
 
 ## 仓库结构
 
@@ -207,14 +206,12 @@ packages/
 
 `setup.sh` 会把根目录和各应用的 `.env.example` 复制为 `.env`，并生成 Django `SECRET_KEY` 与对象存储凭据。常用配置项：
 
-| 变量                                        | 说明                             |
-| ------------------------------------------- | -------------------------------- |
-| `POSTGRES_*`                                | 数据库连接信息                   |
-| `REDIS_HOST` / `REDIS_PORT`                 | Redis 地址                       |
-| `RABBITMQ_*`                                | RabbitMQ 连接信息                |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | 对象存储凭据                   |
-| `AWS_S3_ENDPOINT_URL` / `AWS_S3_BUCKET_NAME` | S3 端点与存储桶                |
-| `SECRET_KEY`                                | Django 密钥（由脚本生成）        |
+- `POSTGRES_*`：数据库连接信息。
+- `REDIS_HOST` / `REDIS_PORT`：Redis 地址。
+- `RABBITMQ_*`：RabbitMQ 连接信息。
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`：对象存储凭据。
+- `AWS_S3_ENDPOINT_URL` / `AWS_S3_BUCKET_NAME`：S3 端点与存储桶。
+- `SECRET_KEY`：Django 密钥，由 `setup.sh` 生成。
 
 `.env` 已被 `.gitignore` 忽略，请勿提交任何真实凭据。
 
@@ -309,13 +306,13 @@ Redis and MinIO are optional in this mode. RabbitMQ is not used; Celery falls ba
 
 ## Commands
 
-| Command                | Description                              |
-| ---------------------- | ---------------------------------------- |
-| `pnpm dev`             | Start all frontend dev servers           |
-| `pnpm build`           | Build all packages and apps              |
-| `pnpm check`           | Run format, lint, and type checks        |
-| `pnpm fix`             | Auto-fix formatting and lint issues      |
-| `pnpm --filter web test` | Run web unit tests (vitest)            |
+| Command                  | Description                        |
+| ------------------------ | ---------------------------------- |
+| `pnpm dev`               | Start all frontend dev servers     |
+| `pnpm build`             | Build all packages and apps        |
+| `pnpm check`             | Run format, lint, and type checks  |
+| `pnpm fix`               | Auto-fix formatting and lint issues |
+| `pnpm --filter web test` | Run web unit tests (vitest)        |
 
 ## Testing
 

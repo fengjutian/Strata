@@ -134,7 +134,7 @@ def test_relation_activity_skips_activity_issue_outside_project(scope):
         ),
         (
             "api_key_client",
-            "strata.api.views.issue",
+            "strata.api.views.issue.common",
             "/api/v1/workspaces/{slug}/projects/{project}/work-items/{issue}/relations/",
         ),
     ],

@@ -119,7 +119,10 @@ class TestCommentEditDelete:
         client = client_for(guest_user)
         comment = _comment(workspace, project, issue, guest_user)
         url = _comment_url(workspace, project, issue, comment)
-        with mock.patch("strata.api.views.issue.issue_activity"), mock.patch("strata.api.views.issue.model_activity"):
+        with (
+            mock.patch("strata.api.views.issue.common.issue_activity"),
+            mock.patch("strata.api.views.issue.common.model_activity"),
+        ):
             resp = client.patch(url, {"comment_html": "<p>edited</p>"}, format="json")
             assert resp.status_code == status.HTTP_200_OK
             resp = client.delete(url)
@@ -154,7 +157,10 @@ class TestCommentEditDelete:
     def test_admin_can_edit_and_delete_any_comment(self, api_key_client, workspace, project, issue, member_user):
         comment = _comment(workspace, project, issue, member_user)
         url = _comment_url(workspace, project, issue, comment)
-        with mock.patch("strata.api.views.issue.issue_activity"), mock.patch("strata.api.views.issue.model_activity"):
+        with (
+            mock.patch("strata.api.views.issue.common.issue_activity"),
+            mock.patch("strata.api.views.issue.common.model_activity"),
+        ):
             resp = api_key_client.patch(url, {"comment_html": "<p>mod</p>"}, format="json")
             assert resp.status_code == status.HTTP_200_OK
             resp = api_key_client.delete(url)
@@ -168,7 +174,10 @@ class TestCommentEditDelete:
         comment = _comment(workspace, project, issue, create_user)
         url = _comment_url(workspace, project, issue, comment)
         client = client_for(workspace_admin)
-        with mock.patch("strata.api.views.issue.issue_activity"), mock.patch("strata.api.views.issue.model_activity"):
+        with (
+            mock.patch("strata.api.views.issue.common.issue_activity"),
+            mock.patch("strata.api.views.issue.common.model_activity"),
+        ):
             resp = client.patch(url, {"comment_html": "<p>mod</p>"}, format="json")
             assert resp.status_code == status.HTTP_200_OK
             resp = client.delete(url)
@@ -186,7 +195,10 @@ class TestCommentEditDelete:
         comment = _comment(workspace, project, issue, create_user)
         url = _comment_url(workspace, project, issue, comment)
         client = client_for(user)
-        with mock.patch("strata.api.views.issue.issue_activity"), mock.patch("strata.api.views.issue.model_activity"):
+        with (
+            mock.patch("strata.api.views.issue.common.issue_activity"),
+            mock.patch("strata.api.views.issue.common.model_activity"),
+        ):
             resp = client.patch(url, {"comment_html": "<p>mod</p>"}, format="json")
             assert resp.status_code == (status.HTTP_200_OK if allowed else status.HTTP_404_NOT_FOUND)
             resp = client.delete(url)
@@ -243,13 +255,13 @@ class TestAttachmentDelete:
     def test_attachment_creator_can_delete(self, request, client_for, workspace, project, issue, fixture_name):
         user = request.getfixturevalue(fixture_name)
         asset = _attachment(workspace, project, issue, user)
-        with mock.patch("strata.api.views.issue.issue_activity"):
+        with mock.patch("strata.api.views.issue.common.issue_activity"):
             resp = client_for(user).delete(_attachment_url(workspace, project, issue, asset))
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
     def test_admin_can_delete_any_attachment(self, api_key_client, workspace, project, issue, member_user):
         asset = _attachment(workspace, project, issue, member_user)
-        with mock.patch("strata.api.views.issue.issue_activity"):
+        with mock.patch("strata.api.views.issue.common.issue_activity"):
             resp = api_key_client.delete(_attachment_url(workspace, project, issue, asset))
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -259,7 +271,7 @@ class TestAttachmentDelete:
     ):
         workspace_admin = _make_user(workspace, project, ADMIN, project_role)
         asset = _attachment(workspace, project, issue, create_user)
-        with mock.patch("strata.api.views.issue.issue_activity"):
+        with mock.patch("strata.api.views.issue.common.issue_activity"):
             resp = client_for(workspace_admin).delete(_attachment_url(workspace, project, issue, asset))
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -273,7 +285,7 @@ class TestAttachmentDelete:
         Project.objects.filter(pk=project.pk).update(guest_view_all_features=False)
         user = _make_user(workspace, project, ws_role, GUEST)
         asset = _attachment(workspace, project, issue, create_user)
-        with mock.patch("strata.api.views.issue.issue_activity"):
+        with mock.patch("strata.api.views.issue.common.issue_activity"):
             resp = client_for(user).delete(_attachment_url(workspace, project, issue, asset))
         assert resp.status_code == (status.HTTP_204_NO_CONTENT if allowed else status.HTTP_404_NOT_FOUND)
         asset.refresh_from_db()
@@ -308,8 +320,8 @@ class TestAttachmentDelete:
         url = _attachment_url(workspace, project, issue, asset)
         client = client_for(member_user)
         with (
-            mock.patch("strata.api.views.issue.issue_activity"),
-            mock.patch("strata.api.views.issue.get_asset_object_metadata"),
+            mock.patch("strata.api.views.issue.common.issue_activity"),
+            mock.patch("strata.api.views.issue.attachment.get_asset_object_metadata"),
         ):
             resp = client.patch(url, {"is_uploaded": True}, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT

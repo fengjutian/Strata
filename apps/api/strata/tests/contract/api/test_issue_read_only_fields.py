@@ -43,8 +43,8 @@ def test_patch_does_not_set_read_only_field(workspace, create_user, field, value
     client.credentials(HTTP_X_API_KEY=token.token)
 
     with (
-        mock.patch("strata.api.views.issue.issue_activity") as issue_activity,
-        mock.patch("strata.api.views.issue.model_activity") as model_activity,
+        mock.patch("strata.api.views.issue.common.issue_activity") as issue_activity,
+        mock.patch("strata.api.views.issue.common.model_activity") as model_activity,
     ):
         response = client.patch(
             f"/api/v1/workspaces/{workspace.slug}/projects/{project.id}/work-items/{issue.id}/",

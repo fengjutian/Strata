@@ -18,9 +18,9 @@ from strata.db.models import Issue, IssueLink, IssueRelation, Project, ProjectMe
 @pytest.fixture(autouse=True)
 def _no_side_effects(db):
     with (
-        mock.patch("strata.api.views.issue.issue_activity"),
-        mock.patch("strata.api.views.issue.crawl_work_item_link_title"),
-        mock.patch("strata.api.views.issue.base_host", return_value="http://testserver"),
+        mock.patch("strata.api.views.issue.common.issue_activity"),
+        mock.patch("strata.api.views.issue.link.crawl_work_item_link_title"),
+        mock.patch("strata.api.views.issue.common.base_host", return_value="http://testserver"),
     ):
         yield
 

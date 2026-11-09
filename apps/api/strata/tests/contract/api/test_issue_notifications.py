@@ -85,7 +85,7 @@ class TestIssueNotificationContract:
         """Creating a work item via the external API dispatches a notifying activity."""
         url = self.get_list_url(workspace.slug, project.id)
 
-        with patch("strata.api.views.issue.issue_activity") as mock_issue_activity:
+        with patch("strata.api.views.issue.common.issue_activity") as mock_issue_activity:
             response = api_key_client.post(url, {"name": "New Issue"}, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -101,7 +101,7 @@ class TestIssueNotificationContract:
         """Updating a work item via the external API dispatches a notifying activity."""
         url = self.get_detail_url(workspace.slug, project.id, create_issue.id)
 
-        with patch("strata.api.views.issue.issue_activity") as mock_issue_activity:
+        with patch("strata.api.views.issue.common.issue_activity") as mock_issue_activity:
             response = api_key_client.patch(url, {"name": "Renamed Issue"}, format="json")
 
         assert response.status_code == status.HTTP_200_OK
@@ -124,7 +124,7 @@ class TestIssueNotificationContract:
         )
         url = self.get_detail_url(workspace.slug, project.id, create_issue.id)
 
-        with patch("strata.api.views.issue.issue_activity") as mock_issue_activity:
+        with patch("strata.api.views.issue.common.issue_activity") as mock_issue_activity:
             response = api_key_client.patch(url, {"assignees": [str(assignee_user.id)]}, format="json")
 
         assert response.status_code == status.HTTP_200_OK

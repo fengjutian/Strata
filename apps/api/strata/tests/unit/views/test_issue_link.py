@@ -150,10 +150,10 @@ class TestIssueLinkDetailPatch:
         request.user.id = self.user_id
         return request
 
-    @patch("strata.api.views.issue.issue_activity")
-    @patch("strata.api.views.issue.crawl_work_item_link_title")
-    @patch("strata.api.views.issue.IssueLinkSerializer")
-    @patch("strata.api.views.issue.IssueLink.objects.get")
+    @patch("strata.api.views.issue.common.issue_activity")
+    @patch("strata.api.views.issue.link.crawl_work_item_link_title")
+    @patch("strata.api.views.issue.link.IssueLinkSerializer")
+    @patch("strata.api.views.issue.link.IssueLink.objects.get")
     def test_patch_does_not_recrawl_when_url_unchanged(
         self, mock_get_link, mock_serializer_cls, mock_crawl, mock_activity
     ):
@@ -180,10 +180,10 @@ class TestIssueLinkDetailPatch:
         mock_crawl.delay.assert_not_called()
         mock_activity.delay.assert_called_once()
 
-    @patch("strata.api.views.issue.issue_activity")
-    @patch("strata.api.views.issue.crawl_work_item_link_title")
-    @patch("strata.api.views.issue.IssueLinkSerializer")
-    @patch("strata.api.views.issue.IssueLink.objects.get")
+    @patch("strata.api.views.issue.common.issue_activity")
+    @patch("strata.api.views.issue.link.crawl_work_item_link_title")
+    @patch("strata.api.views.issue.link.IssueLinkSerializer")
+    @patch("strata.api.views.issue.link.IssueLink.objects.get")
     def test_patch_triggers_crawl_when_url_changed(
         self, mock_get_link, mock_serializer_cls, mock_crawl, mock_activity
     ):

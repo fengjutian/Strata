@@ -31,7 +31,7 @@ def url(workspace, issue):
 
 @pytest.mark.contract
 @pytest.mark.django_db
-@mock.patch("strata.api.views.issue.S3Storage")
+@mock.patch("strata.api.views.issue.attachment.S3Storage")
 def test_string_size_is_accepted(s3, api_key_client, workspace, issue):
     s3.return_value.generate_presigned_post.return_value = {}
 

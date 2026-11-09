@@ -140,8 +140,8 @@ class TestIssuePatchAuditFields:
     def test_patch_keeps_created_by(self, member_api_client, workspace, project, issue, admin_user, member_user):
         url = _issue_detail_url(workspace.slug, project.id, issue.id)
         with (
-            mock.patch("strata.api.views.issue.issue_activity") as issue_activity,
-            mock.patch("strata.api.views.issue.model_activity") as model_activity,
+            mock.patch("strata.api.views.issue.common.issue_activity") as issue_activity,
+            mock.patch("strata.api.views.issue.common.model_activity") as model_activity,
         ):
             response = member_api_client.patch(
                 url, {"name": "Edited by member", "created_by": str(member_user.id)}, format="json"

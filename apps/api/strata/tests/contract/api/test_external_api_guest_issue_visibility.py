@@ -1039,7 +1039,7 @@ class TestWorkItemAttachmentCreateGuestScope:
         assert not FileAsset.objects.filter(issue_id=foreign_issue.id).exists()
 
     @pytest.mark.django_db
-    @mock.patch("strata.api.views.issue.S3Storage")
+    @mock.patch("strata.api.views.issue.attachment.S3Storage")
     def test_guest_allowed_create_on_own_issue(self, s3, guest_client, workspace, project, own_issue):
         s3.return_value.generate_presigned_post.return_value = {}
         response = guest_client.post(
@@ -1055,7 +1055,7 @@ class TestWorkItemAttachmentCreateGuestScope:
         ).exists()
 
     @pytest.mark.django_db
-    @mock.patch("strata.api.views.issue.S3Storage")
+    @mock.patch("strata.api.views.issue.attachment.S3Storage")
     def test_guest_with_view_all_allowed_create_on_foreign_issue(
         self, s3, guest_client, workspace, project, foreign_issue
     ):
@@ -1071,7 +1071,7 @@ class TestWorkItemAttachmentCreateGuestScope:
         )
 
     @pytest.mark.django_db
-    @mock.patch("strata.api.views.issue.S3Storage")
+    @mock.patch("strata.api.views.issue.attachment.S3Storage")
     def test_admin_allowed_create_on_foreign_issue(self, s3, api_key_client, workspace, project, foreign_issue):
         s3.return_value.generate_presigned_post.return_value = {}
         response = api_key_client.post(

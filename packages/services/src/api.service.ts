@@ -9,6 +9,16 @@ import { create } from "axios";
 import { normalizeAPIRequestURL } from "./helpers/url";
 
 /**
+ * Hook invoked when the API answers with 401.
+ *
+ * The web application redirects an expired session to the sign-in screen;
+ * the public share pages (space) and the instance console (admin) treat a
+ * 401 as an ordinary error. Keeping the behaviour in the caller means the
+ * shared base class does not need to know about routing.
+ */
+export type UnauthorizedHandler = () => void;
+
+/**
  * Abstract base class for making HTTP requests using axios
  * @abstract
  */
@@ -19,8 +29,9 @@ export abstract class APIService {
   /**
    * Creates an instance of APIService
    * @param {string} baseURL - The base URL for all HTTP requests
+   * @param {UnauthorizedHandler} [onUnauthorized] - Called when the API answers 401
    */
-  constructor(baseURL: string) {
+  constructor(baseURL: string, onUnauthorized?: UnauthorizedHandler) {
     this.baseURL = baseURL;
     this.axiosInstance = create({
       baseURL,
@@ -39,6 +50,16 @@ export abstract class APIService {
       }
       return config;
     });
+
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (onUnauthorized && error.response && error.response.status === 401) {
+          onUnauthorized();
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   /**

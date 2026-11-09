@@ -17,7 +17,7 @@ from strata.authentication.provider.credentials.magic_code import MagicCodeProvi
 from strata.authentication.rate_limit import AuthenticationThrottle
 from strata.authentication.utils.host import base_host
 from strata.db.models import User
-from strata.settings.redis import redis_instance
+from strata.settings.redis import redis_client
 from strata.license.models import Instance
 
 
@@ -118,7 +118,7 @@ class TestMagicLinkGenerate:
         """Test successful magic link generation"""
         url = reverse("magic-generate")
 
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete("magic_user@strata.so")
         ri.delete("magic_user@strata.so:issued")
 
@@ -137,7 +137,7 @@ class TestMagicLinkGenerate:
         """Test exceeding maximum magic link generation attempts"""
         url = reverse("magic-generate")
 
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete("magic_user@strata.so")
         ri.delete("magic_user@strata.so:issued")
 
@@ -266,7 +266,7 @@ class TestMagicSignIn:
     @pytest.mark.django_db
     def test_expired_invalid_magic_link(self, django_client, setup_user, setup_instance):
         """Test magic link sign-in with expired/invalid link"""
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete("magic_user@strata.so")
         ri.delete("magic_user@strata.so:issued")
 
@@ -305,7 +305,7 @@ class TestMagicSignIn:
         assert response.status_code == status.HTTP_200_OK
 
         # Since we're mocking the magic_link task, we need to manually get the token from Redis
-        ri = redis_instance()
+        ri = redis_client()
         user_data = json.loads(ri.get("magic_user@strata.so"))
         token = user_data["token"]
 
@@ -333,7 +333,7 @@ class TestMagicSignIn:
         assert response.status_code == status.HTTP_200_OK
 
         # Since we're mocking the magic_link task, we need to manually get the token from Redis
-        ri = redis_instance()
+        ri = redis_client()
         user_data = json.loads(ri.get("magic_user@strata.so"))
         token = user_data["token"]
 
@@ -410,7 +410,7 @@ class TestMagicSignUp:
         assert response.status_code == status.HTTP_200_OK
 
         # Since we're mocking the magic_link task, we need to manually get the token from Redis
-        ri = redis_instance()
+        ri = redis_client()
         user_data = json.loads(ri.get(f"magic_{email}"))
         token = user_data["token"]
 
@@ -442,7 +442,7 @@ class TestMagicSignUp:
         assert response.status_code == status.HTTP_200_OK
 
         # Since we're mocking the magic_link task, we need to manually get the token from Redis
-        ri = redis_instance()
+        ri = redis_client()
         user_data = json.loads(ri.get(f"magic_{email}"))
         token = user_data["token"]
 
@@ -470,7 +470,7 @@ def _generate_magic_token(api_client, email):
     gen_url = reverse("magic-generate")
     response = api_client.post(gen_url, {"email": email}, format="json")
     assert response.status_code == status.HTTP_200_OK
-    ri = redis_instance()
+    ri = redis_client()
     return json.loads(ri.get(f"magic_{email}"))["token"]
 
 
@@ -491,7 +491,7 @@ class TestMagicSignInVerifyAttempts:
     def _clear_state(self):
         """Reset throttle cache and magic-link redis state between tests in this class."""
         _clear_auth_throttle_keys()
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete(f"magic_{self.EMAIL}")
         ri.delete(f"magic_{self.EMAIL}:verify_attempts")
         ri.delete(f"magic_{self.EMAIL}:issued")
@@ -515,7 +515,7 @@ class TestMagicSignInVerifyAttempts:
         """
         _generate_magic_token(api_client, self.EMAIL)
         url = reverse("magic-sign-in")
-        ri = redis_instance()
+        ri = redis_client()
 
         # First (MAX-1) wrong attempts: each redirects with INVALID_MAGIC_CODE_SIGN_IN.
         for i in range(MagicCodeProvider.MAX_VERIFY_ATTEMPTS - 1):
@@ -568,7 +568,7 @@ class TestMagicSignInVerifyAttempts:
         so a correct code is refused once MAX_VERIFY_ATTEMPTS attempts are counted.
         """
         token = _generate_magic_token(api_client, self.EMAIL)
-        ri = redis_instance()
+        ri = redis_client()
         ri.set(f"magic_{self.EMAIL}:verify_attempts", MagicCodeProvider.MAX_VERIFY_ATTEMPTS, ex=600)
 
         response = django_client.post(reverse("magic-sign-in"), {"email": self.EMAIL, "code": token}, follow=False)
@@ -586,7 +586,7 @@ class TestMagicSignInVerifyAttempts:
         """Codes issued per email stay capped per window when earlier codes hit the verify cap."""
         url = reverse("magic-sign-in")
         gen_url = reverse("magic-generate")
-        ri = redis_instance()
+        ri = redis_client()
         issued_key = f"magic_{self.EMAIL}:issued"
 
         # The first code plus 3 regenerations are issued; the next request is refused.
@@ -617,7 +617,7 @@ class TestMagicSignInVerifyAttempts:
         """The verify_attempts counter increments by exactly one per wrong-code POST."""
         _generate_magic_token(api_client, self.EMAIL)
         url = reverse("magic-sign-in")
-        ri = redis_instance()
+        ri = redis_client()
         counter_key = f"magic_{self.EMAIL}:verify_attempts"
 
         # Before any wrong attempt the counter does not exist (Lua INCR creates it).
@@ -638,7 +638,7 @@ class TestMagicSignInVerifyAttempts:
         """
         _generate_magic_token(api_client, self.EMAIL)
         url = reverse("magic-sign-in")
-        ri = redis_instance()
+        ri = redis_client()
         counter_key = f"magic_{self.EMAIL}:verify_attempts"
 
         for _ in range(MagicCodeProvider.MAX_VERIFY_ATTEMPTS - 2):
@@ -664,7 +664,7 @@ class TestMagicSignUpVerifyAttempts:
     @pytest.fixture(autouse=True)
     def _clear_state(self):
         _clear_auth_throttle_keys()
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete(f"magic_{self.EMAIL}")
         ri.delete(f"magic_{self.EMAIL}:verify_attempts")
         ri.delete(f"magic_{self.EMAIL}:issued")
@@ -682,7 +682,7 @@ class TestMagicSignUpVerifyAttempts:
         """The MAX-th wrong code on the sign-up endpoint returns the SIGN_UP variant of EXHAUSTED."""
         _generate_magic_token(api_client, self.EMAIL)
         url = reverse("magic-sign-up")
-        ri = redis_instance()
+        ri = redis_client()
 
         for _ in range(MagicCodeProvider.MAX_VERIFY_ATTEMPTS - 1):
             response = django_client.post(url, {"email": self.EMAIL, "code": "000000"}, follow=False)
@@ -854,7 +854,7 @@ class TestBotUserLoginBlocked:
     def _clear_state(self):
         """Reset throttle cache and the bot's magic-link redis state around each test."""
         _clear_auth_throttle_keys()
-        ri = redis_instance()
+        ri = redis_client()
         ri.delete(f"magic_{self.BOT_EMAIL}")
         ri.delete(f"magic_{self.BOT_EMAIL}:verify_attempts")
         ri.delete(f"magic_{self.BOT_EMAIL}:issued")

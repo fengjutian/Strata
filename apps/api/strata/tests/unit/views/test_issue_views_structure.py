@@ -88,10 +88,15 @@ class TestWorkItemViewsStructure:
 
     def test_legacy_import_paths_still_work(self):
         # These are the exact import statements used across the codebase.
-        from strata.api.views.cycle import guest_cannot_view_issue  # noqa: F401
-        from strata.api.views.intake import is_restricted_guest  # noqa: F401
-        from strata.api.views.issue import IssueLinkDetailAPIEndpoint  # noqa: F401
-        from strata.api.views.module import guest_cannot_view_issue  # noqa: F401
+        from strata.api.views.cycle import guest_cannot_view_issue as cycle_guest_helper
+        from strata.api.views.intake import is_restricted_guest
+        from strata.api.views.issue import IssueLinkDetailAPIEndpoint
+        from strata.api.views.module import guest_cannot_view_issue as module_guest_helper
+
+        assert cycle_guest_helper is not None
+        assert module_guest_helper is not None
+        assert is_restricted_guest is not None
+        assert IssueLinkDetailAPIEndpoint is not None
 
     def test_each_endpoint_lives_in_its_documented_module(self):
         for module_name, names in MODULE_OWNERSHIP.items():
@@ -161,7 +166,6 @@ class TestWorkItemViewsStructure:
         # Every module that uses these symbols must reference them via
         # ``common.<symbol>`` rather than holding its own binding.
         for module_name in ("work_item", "link", "comment", "attachment", "relation"):
-            module = importlib.import_module(f"strata.api.views.issue.{module_name}")
             source = (_package_dir() / f"{module_name}.py").read_text(encoding="utf-8")
             for symbol in ("issue_activity", "model_activity", "base_host"):
                 if f"common.{symbol}" not in source:

@@ -19,7 +19,7 @@ from django.utils import timezone
 # Module imports
 from strata.db.models import EmailNotificationLog, Issue, User
 from strata.license.utils.instance_value import get_email_configuration
-from strata.settings.redis import redis_instance
+from strata.settings.redis import redis_client
 from strata.utils.email import generate_plain_text_from_html
 from strata.utils.exception_logger import log_exception
 
@@ -32,15 +32,15 @@ def remove_unwanted_characters(input_text):
 
 # acquire and delete redis lock
 def acquire_lock(lock_id, expire_time=300):
-    redis_client = redis_instance()
     """Attempt to acquire a lock with a specified expiration time."""
-    return redis_client.set(lock_id, "true", nx=True, ex=expire_time)
+    client = redis_client()
+    return client.set(lock_id, "true", nx=True, ex=expire_time)
 
 
 def release_lock(lock_id):
     """Release a lock."""
-    redis_client = redis_instance()
-    redis_client.delete(lock_id)
+    client = redis_client()
+    client.delete(lock_id)
 
 
 @shared_task
@@ -160,7 +160,7 @@ def send_email_notification(issue_id, notification_data, receiver_id, email_noti
     try:
         if acquire_lock(lock_id=lock_id):
             # get the redis instance
-            ri = redis_instance()
+            ri = redis_client()
             base_api = ri.get(str(issue_id)).decode() if ri.get(str(issue_id)) else None
 
             # Skip if base api is not present

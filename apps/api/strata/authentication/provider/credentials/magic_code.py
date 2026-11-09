@@ -11,7 +11,7 @@ import secrets
 # Module imports
 from strata.authentication.adapter.credential import CredentialAdapter
 from strata.license.utils.instance_value import get_configuration_value
-from strata.settings.redis import redis_instance
+from strata.settings.redis import redis_client
 from strata.authentication.adapter.error import (
     AUTHENTICATION_ERROR_CODES,
     AuthenticationException,
@@ -86,7 +86,7 @@ class MagicCodeProvider(CredentialAdapter):
         ## Generate a random token
         token = str(secrets.randbelow(900000) + 100000)
 
-        ri = redis_instance()
+        ri = redis_client()
 
         key = "magic_" + str(self.key)
 
@@ -132,7 +132,7 @@ class MagicCodeProvider(CredentialAdapter):
         )
 
     def set_user_data(self):
-        ri = redis_instance()
+        ri = redis_client()
         email = str(self.key).replace("magic_", "", 1)
         attempts_key = self._verify_attempts_key(self.key)
         if ri.exists(self.key):

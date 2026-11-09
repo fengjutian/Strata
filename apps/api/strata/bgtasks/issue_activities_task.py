@@ -32,7 +32,7 @@ from strata.db.models import (
     User,
     EstimatePoint,
 )
-from strata.settings.redis import redis_instance
+from strata.settings.redis import redis_client
 from strata.utils.exception_logger import log_exception
 from strata.utils.issue_relation_mapper import get_inverse_relation
 from strata.utils.uuid import is_valid_uuid
@@ -1572,7 +1572,7 @@ def issue_activity(
 
         if issue_id is not None:
             if origin:
-                ri = redis_instance()
+                ri = redis_client()
                 # set the request origin in redis
                 ri.set(str(issue_id), origin, ex=600)
             issue = Issue.objects.filter(pk=issue_id, project_id=project_id).first()

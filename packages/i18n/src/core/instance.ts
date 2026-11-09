@@ -15,15 +15,22 @@ import type { i18n as I18nInstance } from "i18next";
 
 export const i18nInstance: I18nInstance = i18n.createInstance();
 
-i18nInstance
-  .use(ICU)
-  .use(initReactI18next)
-  .use(resourcesToBackend((language: string, namespace: string) => import(`../locales/${language}/${namespace}.json`)));
+// `locales` is a symlink to `src/locales` in git. Windows checkouts without symlink
+// support materialise it as a small text file, so the package-root path fails from
+// `dist/`. Fall back to the source directory, which resolves from both `dist/index.js`
+// (../src/locales) and `src/core/instance.ts` (../locales).
+async function loadLocaleResources(language: string, namespace: string) {
+  try {
+    return await import(`../locales/${language}/${namespace}.json`);
+  } catch {
+    return await import(`../src/locales/${language}/${namespace}.json`);
+  }
+}
+
+i18nInstance.use(ICU).use(initReactI18next).use(resourcesToBackend(loadLocaleResources));
 
 const initialLng =
-  typeof window !== "undefined"
-    ? localStorage.getItem(LANGUAGE_STORAGE_KEY) || DEFAULT_LANGUAGE
-    : DEFAULT_LANGUAGE;
+  typeof window !== "undefined" ? localStorage.getItem(LANGUAGE_STORAGE_KEY) || DEFAULT_LANGUAGE : DEFAULT_LANGUAGE;
 
 export const initPromise = i18nInstance
   .init({

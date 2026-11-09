@@ -142,10 +142,7 @@ export function InstanceSetupForm() {
       <AuthHeader />
       <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
         <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">
-          <FormHeader
-            heading={t("auth.instance_setup.heading")}
-            subHeading={t("auth.instance_setup.description")}
-          />
+          <FormHeader heading={t("auth.instance_setup.heading")} subHeading={t("auth.instance_setup.description")} />
           {errorData.type &&
             errorData?.message &&
             ![EErrorCodes.INVALID_EMAIL, EErrorCodes.INVALID_PASSWORD].includes(errorData.type) && (

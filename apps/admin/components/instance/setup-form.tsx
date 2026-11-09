@@ -17,6 +17,7 @@ import { Icon } from "@makestrata/propel/components/icon";
 import { IconButton } from "@makestrata/propel/components/icon-button";
 import { PasswordStrengthIndicator } from "@strata/blocks/auth";
 import { Banner } from "@makestrata/propel/components/banner";
+import { useTranslation } from "@strata/i18n";
 import { getPasswordStrength, validatePersonName, validateCompanyName } from "@strata/utils";
 // components
 import { AuthHeader } from "@/app/(all)/(home)/auth-header";
@@ -60,6 +61,7 @@ const defaultFromData: TFormData = {
 };
 
 export function InstanceSetupForm() {
+  const { t } = useTranslation();
   // search params
   const searchParams = useSearchParams();
   const firstNameParam = searchParams?.get("first_name") || undefined;
@@ -141,8 +143,8 @@ export function InstanceSetupForm() {
       <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
         <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">
           <FormHeader
-            heading="Setup your Strata Instance"
-            subHeading="Post setup you will be able to manage this Strata instance."
+            heading={t("auth.instance_setup.heading")}
+            subHeading={t("auth.instance_setup.description")}
           />
           {errorData.type &&
             errorData?.message &&
@@ -166,7 +168,7 @@ export function InstanceSetupForm() {
                   id="first_name"
                   name="first_name"
                   type="text"
-                  placeholder="Wilber"
+                  placeholder={t("auth.instance_setup.first_name_placeholder")}
                   value={formData.first_name}
                   onChange={(e) => {
                     const validation = validatePersonName(e.target.value);
@@ -179,7 +181,7 @@ export function InstanceSetupForm() {
                   autoFocus
                   maxLength={50}
                   orientation="vertical"
-                  label="First name"
+                  label={t("auth.instance_setup.first_name")}
                   required
                 />
               </div>
@@ -189,7 +191,7 @@ export function InstanceSetupForm() {
                   id="last_name"
                   name="last_name"
                   type="text"
-                  placeholder="Wright"
+                  placeholder={t("auth.instance_setup.last_name_placeholder")}
                   value={formData.last_name}
                   onChange={(e) => {
                     const validation = validatePersonName(e.target.value);
@@ -200,7 +202,7 @@ export function InstanceSetupForm() {
                   autoComplete="off"
                   maxLength={50}
                   orientation="vertical"
-                  label="Last name"
+                  label={t("auth.instance_setup.last_name")}
                   required
                 />
               </div>
@@ -211,13 +213,13 @@ export function InstanceSetupForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="name@company.com"
+              placeholder={t("auth.instance_setup.email_placeholder")}
               value={formData.email}
               onChange={(e) => handleFormChange("email", e.target.value)}
               aria-invalid={errorData.type === EErrorCodes.INVALID_EMAIL}
               autoComplete="off"
               orientation="vertical"
-              label="Email"
+              label={t("auth.instance_setup.email")}
               required
               error={errorData.type === EErrorCodes.INVALID_EMAIL && errorData.message ? errorData.message : undefined}
             />
@@ -227,7 +229,7 @@ export function InstanceSetupForm() {
               id="company_name"
               name="company_name"
               type="text"
-              placeholder="Company name"
+              placeholder={t("auth.instance_setup.company_name_placeholder")}
               value={formData.company_name}
               onChange={(e) => {
                 const validation = validateCompanyName(e.target.value, false);
@@ -237,7 +239,7 @@ export function InstanceSetupForm() {
               }}
               maxLength={80}
               orientation="vertical"
-              label="Company name"
+              label={t("auth.instance_setup.company_name")}
               required
             />
 
@@ -247,7 +249,7 @@ export function InstanceSetupForm() {
                 id="password"
                 name="password"
                 type={showPassword.password ? "text" : "password"}
-                placeholder="New password"
+                placeholder={t("auth.instance_setup.password_placeholder")}
                 value={formData.password}
                 onChange={(e) => handleFormChange("password", e.target.value)}
                 aria-invalid={errorData.type === EErrorCodes.INVALID_PASSWORD}
@@ -255,7 +257,7 @@ export function InstanceSetupForm() {
                 onBlur={() => setIsPasswordInputFocused(false)}
                 autoComplete="new-password"
                 orientation="vertical"
-                label="Set a password"
+                label={t("auth.instance_setup.password")}
                 required
                 error={
                   errorData.type === EErrorCodes.INVALID_PASSWORD && errorData.message ? errorData.message : undefined
@@ -265,7 +267,11 @@ export function InstanceSetupForm() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={showPassword.password ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword.password
+                        ? t("auth.instance_setup.hide_password")
+                        : t("auth.instance_setup.show_password")
+                    }
                     aria-pressed={showPassword.password}
                     icon={<Icon icon={showPassword.password ? HideOutline : ShowOutline} />}
                     onClick={() => handleShowPassword("password")}
@@ -283,19 +289,23 @@ export function InstanceSetupForm() {
                 name="confirm_password"
                 value={formData.confirm_password}
                 onChange={(e) => handleFormChange("confirm_password", e.target.value)}
-                placeholder="Confirm password"
+                placeholder={t("auth.instance_setup.confirm_password_placeholder")}
                 onFocus={() => setIsRetryPasswordInputFocused(true)}
                 onBlur={() => setIsRetryPasswordInputFocused(false)}
                 autoComplete="new-password"
                 orientation="vertical"
-                label="Confirm password"
+                label={t("auth.instance_setup.confirm_password")}
                 required
                 endIcon={
                   <IconButton
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={showPassword.retypePassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword.retypePassword
+                        ? t("auth.instance_setup.hide_password")
+                        : t("auth.instance_setup.show_password")
+                    }
                     aria-pressed={showPassword.retypePassword}
                     icon={<Icon icon={showPassword.retypePassword ? HideOutline : ShowOutline} />}
                     onClick={() => handleShowPassword("retypePassword")}
@@ -305,7 +315,9 @@ export function InstanceSetupForm() {
               {!!formData.confirm_password &&
                 formData.password !== formData.confirm_password &&
                 renderPasswordMatchError && (
-                  <span className="text-body-xs-regular text-danger-primary">Passwords don{"'"}t match</span>
+                  <span className="text-body-xs-regular text-danger-primary">
+                    {t("auth.instance_setup.password_mismatch")}
+                  </span>
                 )}
             </div>
 
@@ -313,20 +325,20 @@ export function InstanceSetupForm() {
               <div>
                 <Checkbox
                   id="is_telemetry_enabled"
-                  aria-label="Allow Strata to anonymously collect usage events"
+                  aria-label={t("auth.instance_setup.telemetry_label")}
                   onCheckedChange={(checked) => handleFormChange("is_telemetry_enabled", checked)}
                   checked={formData.is_telemetry_enabled}
                 />
               </div>
               <label className="cursor-pointer text-body-xs-medium text-tertiary" htmlFor="is_telemetry_enabled">
-                Allow Strata to anonymously collect usage events.{" "}
+                {t("auth.instance_setup.telemetry_label")}{" "}
                 <a
                   href="https://developers.strata.so/self-hosting/telemetry"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 text-body-xs-medium text-accent-primary hover:underline"
                 >
-                  See More
+                  {t("auth.instance_setup.telemetry_link")}
                 </a>
               </label>
             </div>
@@ -339,7 +351,7 @@ export function InstanceSetupForm() {
                 stretch="full"
                 disabled={isButtonDisabled}
                 loading={isSubmitting}
-                label="Continue"
+                label={t("auth.instance_setup.continue")}
               />
             </div>
           </form>

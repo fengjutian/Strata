@@ -6,6 +6,7 @@
 
 import React from "react";
 import { E_PASSWORD_STRENGTH } from "@strata/constants";
+import { useTranslation } from "@strata/i18n";
 import { cn, getPasswordStrength, getPasswordCriteria } from "@strata/utils";
 import { getStrengthInfo, getFragmentColor } from "./helper";
 import { TickCircleOutline } from "@makestrata/propel/icons";
@@ -21,6 +22,7 @@ export function PasswordStrengthIndicator({
   showCriteria = true,
   isFocused = false,
 }: PasswordStrengthIndicatorProps) {
+  const { t } = useTranslation();
   const strength = getPasswordStrength(password);
   const criteria = getPasswordCriteria(password);
   const strengthInfo = getStrengthInfo(strength);
@@ -49,7 +51,9 @@ export function PasswordStrengthIndicator({
 
         {/* Strength Message */}
         {password && (
-          <p className={cn("!text-body-xs-medium font-medium", strengthInfo.textColor)}>{strengthInfo.message}</p>
+          <p className={cn("!text-body-xs-medium font-medium", strengthInfo.textColor)}>
+            {t(`auth.password.strength.${strength}`, { defaultValue: strengthInfo.message })}
+          </p>
         )}
       </div>
 
@@ -72,7 +76,7 @@ export function PasswordStrengthIndicator({
                   "text-primary": !criterion.isValid,
                 })}
               >
-                {criterion.label}
+                {t(`auth.password.criteria.${criterion.key}`, { defaultValue: criterion.label })}
               </span>
             </div>
           ))}

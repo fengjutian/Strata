@@ -730,7 +730,7 @@ Write-Host ""
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
 if (-not $SkipFrontend) {
     Write-Host "  主应用    http://localhost:3000"
-    Write-Host "  管理后台  http://localhost:3001/god-mode   （首次注册实例管理员）"
+    Write-Host "  管理后台  http://localhost:3001/god-mode/   （首次注册实例管理员，结尾的 / 不能省）"
     Write-Host "  分享页    http://localhost:3002"
 }
 if (-not $SkipApi) {
@@ -743,6 +743,6 @@ Write-Host "  状态      .\local-dev.ps1 -Status"
 Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 if (-not $SkipFrontend -and -not $SkipApi) {
-    Write-Host "打开 http://localhost:3001/god-mode 注册管理员，再用同一账号登录 http://localhost:3000" -ForegroundColor Green
+    Write-Host "打开 http://localhost:3001/god-mode/ 注册管理员（结尾的 / 不能省），再用同一账号登录 http://localhost:3000" -ForegroundColor Green
 }
 Write-Host ""

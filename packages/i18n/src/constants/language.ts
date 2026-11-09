@@ -8,6 +8,10 @@ import type { TLanguage, ILanguageOption } from "../types";
 
 export const FALLBACK_LANGUAGE: TLanguage = "en";
 
+// Language a first-time visitor gets when nothing is stored yet. Missing keys still
+// fall back to FALLBACK_LANGUAGE (English), so partial translations degrade cleanly.
+export const DEFAULT_LANGUAGE: TLanguage = "zh-CN";
+
 export const SUPPORTED_LANGUAGES: ILanguageOption[] = [
   { label: "English", value: "en" },
   { label: "Français", value: "fr" },

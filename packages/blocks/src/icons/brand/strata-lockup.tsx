@@ -6,41 +6,29 @@
 
 import * as React from "react";
 
-import { STRATA_MARK_DATA_URI } from "./strata-mark-data";
+import { STRATA_LOCKUP_ARTWORK_DATA_URI } from "./strata-lockup-artwork-data";
 
-export type StrataLockupProps = React.ComponentPropsWithoutRef<"svg">;
+export type StrataLockupProps = Omit<React.ComponentPropsWithoutRef<"img">, "src" | "alt">;
+
+// Artwork aspect ratio (1366x487), used when only `height` is supplied.
+const ARTWORK_ASPECT = 1366 / 487;
 
 /**
- * Official Strata lockup: brand mark + "Strata" wordmark.
- *
- * Kept as a single SVG so every call site can size it with `h-*`/`w-*` classes
- * (the viewBox does the scaling) and colour it with `currentColor`. Replace the
- * <text> node with official letterforms when the vector wordmark is available.
+ * Official Strata lockup — the supplied artwork, used as-is (mark + wordmark and
+ * its own backdrop/glow). Sizing goes through `height`, `width` or the usual
+ * `h-*`/`w-*` classes.
  */
-export function StrataLockup({ width = "253", height = "53", className, color = "currentColor" }: StrataLockupProps) {
+export function StrataLockup({ height = 53, width, className, ...props }: StrataLockupProps) {
+  const pixelHeight = typeof height === "number" ? height : Number(height) || 53;
+
   return (
-    <svg
-      width={width}
+    <img
+      src={STRATA_LOCKUP_ARTWORK_DATA_URI}
+      alt="Strata"
       height={height}
-      viewBox="0 0 253 53"
-      xmlns="http://www.w3.org/2000/svg"
+      width={width ?? Math.round(pixelHeight * ARTWORK_ASPECT)}
       className={className}
-      style={{ color }}
-      role="img"
-      aria-label="Strata"
-    >
-      <image href={STRATA_MARK_DATA_URI} x="0" y="0.5" width="55" height="52" preserveAspectRatio="xMinYMid meet" />
-      <text
-        x="66"
-        y="39.5"
-        fill="currentColor"
-        fontFamily="'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
-        fontSize="39"
-        fontWeight="600"
-        letterSpacing="-1"
-      >
-        Strata
-      </text>
-    </svg>
+      {...props}
+    />
   );
 }

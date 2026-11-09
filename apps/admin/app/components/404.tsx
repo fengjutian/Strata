@@ -8,6 +8,7 @@ import { Link } from "react-router";
 // strata imports
 import { Button } from "@makestrata/propel/components/button";
 import { EmptyStateDetailed } from "@strata/blocks/empty-state";
+import { tr } from "@/lib/admin-i18n";
 
 function PageNotFound() {
   return (
@@ -16,8 +17,10 @@ function PageNotFound() {
         align="center"
         assetKey="error-404"
         assetClassName="size-40"
-        title="Oops! Something went wrong."
-        description="Sorry, the page you are looking for cannot be found. It may have been removed, had its name changed, or is temporarily unavailable."
+        title={tr("Oops! Something went wrong.")}
+        description={tr(
+          "Sorry, the page you are looking for cannot be found. It may have been removed, had its name changed, or is temporarily unavailable."
+        )}
         customButton={
           <Button
             variant="primary"
@@ -25,7 +28,7 @@ function PageNotFound() {
             stretch="auto"
             nativeButton={false}
             render={<Link to="/general/" />}
-            label="Go to general settings"
+            label={tr("Go to general settings")}
           />
         }
       />

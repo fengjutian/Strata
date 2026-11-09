@@ -16,6 +16,7 @@ import type { TCopyField } from "@/components/common/copy-field";
 import { OAuthProviderForm } from "@/components/authentication/oauth-provider-form";
 // hooks
 import { useOAuthProviderConfigForm } from "@/hooks/use-oauth-provider-config-form";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   config: IFormattedInstanceConfiguration;
@@ -48,7 +49,7 @@ export function InstanceGithubConfigForm(props: Props) {
     {
       key: "GITHUB_CLIENT_ID",
       type: "text",
-      label: "Client ID",
+      label: tr("Client ID"),
       description: (
         <>
           You will get this from your{" "}
@@ -58,7 +59,7 @@ export function InstanceGithubConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            GitHub OAuth application settings.
+            {tr("GitHub OAuth application settings.")}
           </a>
         </>
       ),
@@ -69,7 +70,7 @@ export function InstanceGithubConfigForm(props: Props) {
     {
       key: "GITHUB_CLIENT_SECRET",
       type: "password",
-      label: "Client secret",
+      label: tr("Client secret"),
       description: (
         <>
           Your client secret is also found in your{" "}
@@ -79,7 +80,7 @@ export function InstanceGithubConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            GitHub OAuth application settings.
+            {tr("GitHub OAuth application settings.")}
           </a>
         </>
       ),
@@ -90,8 +91,8 @@ export function InstanceGithubConfigForm(props: Props) {
     {
       key: "GITHUB_ORGANIZATION_ID",
       type: "text",
-      label: "Organization ID",
-      description: <>The organization github ID.</>,
+      label: tr("Organization ID"),
+      description: <>{tr("The organization github ID.")}</>,
       placeholder: "123456789",
       error: Boolean(errors.GITHUB_ORGANIZATION_ID),
       required: false,
@@ -101,17 +102,18 @@ export function InstanceGithubConfigForm(props: Props) {
   const GITHUB_COMMON_SERVICE_DETAILS: TCopyField[] = [
     {
       key: "Origin_URL",
-      label: "Origin URL",
+      label: tr("Origin URL"),
       url: originURL,
       description: (
         <>
-          We will auto-generate this. Paste this into the <CodeBlock darkerShade>Authorized origin URL</CodeBlock> field{" "}
+          {tr("We will auto-generate this. Paste this into the")}
+          <CodeBlock darkerShade>{tr("Authorized origin URL")}</CodeBlock> field{" "}
           <a
             href="https://github.com/settings/applications/new"
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="GitHub OAuth application settings"
+            aria-label={tr("GitHub OAuth application settings")}
           >
             here.
           </a>
@@ -123,18 +125,18 @@ export function InstanceGithubConfigForm(props: Props) {
   const GITHUB_SERVICE_DETAILS: TCopyField[] = [
     {
       key: "Callback_URI",
-      label: "Callback URI",
+      label: tr("Callback URI"),
       url: `${originURL}/auth/github/callback/`,
       description: (
         <>
-          We will auto-generate this. Paste this into your <CodeBlock darkerShade>Authorized Callback URI</CodeBlock>{" "}
-          field{" "}
+          {tr("We will auto-generate this. Paste this into your")}
+          <CodeBlock darkerShade>{tr("Authorized Callback URI")}</CodeBlock> field{" "}
           <a
             href="https://github.com/settings/applications/new"
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="GitHub OAuth application settings"
+            aria-label={tr("GitHub OAuth application settings")}
           >
             here.
           </a>

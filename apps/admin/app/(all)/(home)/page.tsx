@@ -14,6 +14,7 @@ import { useInstance } from "@/hooks/store";
 // components
 import type { Route } from "./+types/page";
 import { InstanceSignInForm } from "./sign-in-form";
+import { tr } from "@/lib/admin-i18n";
 
 function HomePage() {
   // store hooks
@@ -45,6 +46,6 @@ function HomePage() {
 export default observer(HomePage);
 
 export const meta: Route.MetaFunction = () => [
-  { title: "Admin – Instance Setup & Sign-In" },
+  { title: tr("Admin – Instance Setup & Sign-In") },
   { name: "description", content: "Configure your Strata instance or sign in to the admin portal." },
 ];

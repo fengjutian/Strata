@@ -21,6 +21,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceGitlabConfigForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthenticationPage(
   _props: Route.ComponentProps
@@ -46,11 +47,11 @@ const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthent
     setPromiseToast(updateConfigPromise, {
       loading: "Saving Configuration",
       success: {
-        title: "Configuration saved",
+        title: tr("Configuration saved"),
         message: () => `GitLab authentication is now ${value === "1" ? "active" : "disabled"}.`,
       },
       error: {
-        title: "Error",
+        title: tr("Error"),
         message: () => "Failed to save configuration",
       },
     });
@@ -69,11 +70,11 @@ const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthent
       customHeader={
         <AuthenticationMethodCard
           name="GitLab"
-          description="Allow members to login or sign up to strata with their GitLab accounts."
-          icon={<img src={GitlabLogo} height={24} width={24} alt="GitLab Logo" />}
+          description={tr("Allow members to login or sign up to strata with their GitLab accounts.")}
+          icon={<img src={GitlabLogo} height={24} width={24} alt={tr("GitLab Logo")} />}
           config={
             <Switch
-              aria-label="Enable GitLab authentication"
+              aria-label={tr("Enable GitLab authentication")}
               checked={Boolean(parseInt(enableGitlabConfig))}
               onCheckedChange={() => {
                 if (Boolean(parseInt(enableGitlabConfig)) === true) {
@@ -106,6 +107,6 @@ const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthent
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "GitLab Authentication - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("GitLab Authentication - God Mode") }];
 
 export default InstanceGitlabAuthenticationPage;

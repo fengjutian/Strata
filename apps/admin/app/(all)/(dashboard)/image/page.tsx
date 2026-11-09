@@ -15,6 +15,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceImageConfigForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceImagePage = observer(function InstanceImagePage(_props: Route.ComponentProps) {
   // store
@@ -25,8 +26,8 @@ const InstanceImagePage = observer(function InstanceImagePage(_props: Route.Comp
   return (
     <PageWrapper
       header={{
-        title: "Third-party image libraries",
-        description: "Let your users search and choose images from third-party libraries",
+        title: tr("Third-party image libraries"),
+        description: tr("Let your users search and choose images from third-party libraries"),
       }}
     >
       {formattedConfig ? (
@@ -41,6 +42,6 @@ const InstanceImagePage = observer(function InstanceImagePage(_props: Route.Comp
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "Images Settings - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("Images Settings - God Mode") }];
 
 export default InstanceImagePage;

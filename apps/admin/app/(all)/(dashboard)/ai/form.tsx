@@ -14,6 +14,7 @@ import { ControllerInput } from "@/components/common/controller-input";
 import { setToast } from "@strata/blocks/toast";
 // hooks
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 type IInstanceAIForm = {
   config: IFormattedInstanceConfiguration;
@@ -41,7 +42,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
     {
       key: "LLM_MODEL",
       type: "text",
-      label: "LLM Model",
+      label: tr("LLM Model"),
       description: (
         <>
           Choose an OpenAI engine.{" "}
@@ -50,9 +51,9 @@ export function InstanceAIForm(props: IInstanceAIForm) {
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="OpenAI models documentation"
+            aria-label={tr("OpenAI models documentation")}
           >
-            Learn more
+            {tr("Learn more")}
           </a>
         </>
       ),
@@ -63,7 +64,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
     {
       key: "LLM_API_KEY",
       type: "password",
-      label: "API key",
+      label: tr("API key"),
       description: (
         <>
           You will find your API key{" "}
@@ -72,7 +73,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="OpenAI API keys page"
+            aria-label={tr("OpenAI API keys page")}
           >
             here.
           </a>
@@ -91,8 +92,8 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       .then(() =>
         setToast({
           type: "success",
-          title: "Success",
-          message: "AI Settings updated successfully",
+          title: tr("Success"),
+          message: tr("AI Settings updated successfully"),
         })
       )
       .catch((err) => console.error(err));
@@ -103,7 +104,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       <div className="space-y-3">
         <div>
           <div className="pb-1 text-h6-medium text-primary">OpenAI</div>
-          <div className="text-body-sm-regular text-tertiary">If you use ChatGPT, this is for you.</div>
+          <div className="text-body-sm-regular text-tertiary">{tr("If you use ChatGPT, this is for you.")}</div>
         </div>
         <div className="grid-col grid w-full grid-cols-1 items-center justify-between gap-x-12 gap-y-8 lg:grid-cols-3">
           {aiFormFields.map((field) => (

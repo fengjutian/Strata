@@ -12,6 +12,7 @@ import { ControllerInput } from "@/components/common/controller-input";
 import { setToast } from "@strata/blocks/toast";
 // hooks
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 type IInstanceImageConfigForm = {
   config: IFormattedInstanceConfiguration;
@@ -44,8 +45,8 @@ export function InstanceImageConfigForm(props: IInstanceImageConfigForm) {
       reset(formData);
       setToast({
         type: "success",
-        title: "Success",
-        message: "Image Configuration Settings updated successfully",
+        title: tr("Success"),
+        message: tr("Image Configuration Settings updated successfully"),
       });
     } catch (err) {
       console.error(err);
@@ -59,18 +60,18 @@ export function InstanceImageConfigForm(props: IInstanceImageConfigForm) {
           control={control}
           type="password"
           name="UNSPLASH_ACCESS_KEY"
-          label="Access key from your Unsplash account"
+          label={tr("Access key from your Unsplash account")}
           description={
             <>
-              You will find your access key in your Unsplash developer console.&nbsp;
+              {tr("You will find your access key in your Unsplash developer console.&nbsp;")}
               <a
                 href="https://unsplash.com/documentation#creating-a-developer-account"
                 target="_blank"
                 className="text-accent-primary hover:underline"
                 rel="noreferrer"
-                aria-label="Unsplash developer account documentation"
+                aria-label={tr("Unsplash developer account documentation")}
               >
-                Learn more.
+                {tr("Learn more.")}
               </a>
             </>
           }

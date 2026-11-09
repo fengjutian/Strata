@@ -21,6 +21,7 @@ import { validateSlug, validateWorkspaceName } from "@strata/utils";
 import { setToast } from "@strata/blocks/toast";
 // hooks
 import { useWorkspace } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 const instanceWorkspaceService = new InstanceWorkspaceService();
 
@@ -68,16 +69,16 @@ export function WorkspaceCreateForm() {
             .then(async () => {
               setToast({
                 type: "success",
-                title: "Success!",
-                message: "Workspace created successfully.",
+                title: tr("Success!"),
+                message: tr("Workspace created successfully."),
               });
               router.push(`/workspace`);
             })
             .catch(() => {
               setToast({
                 type: "error",
-                title: "Error!",
-                message: "Workspace could not be created. Please try again.",
+                title: tr("Error!"),
+                message: tr("Workspace could not be created. Please try again."),
               });
             });
         } else setSlugError(true);
@@ -85,8 +86,8 @@ export function WorkspaceCreateForm() {
       .catch(() => {
         setToast({
           type: "error",
-          title: "Error!",
-          message: "Some error occurred while creating workspace. Please try again.",
+          title: tr("Error!"),
+          message: tr("Some error occurred while creating workspace. Please try again."),
         });
       });
   };
@@ -125,7 +126,7 @@ export function WorkspaceCreateForm() {
                 });
               }}
               ref={ref}
-              placeholder="Something familiar and recognizable is always best."
+              placeholder={tr("Something familiar and recognizable is always best.")}
               error={errors.name?.message}
             />
           )}
@@ -222,7 +223,7 @@ export function WorkspaceCreateForm() {
           stretch="auto"
           nativeButton={false}
           render={<Link href="/workspace" />}
-          label="Go back"
+          label={tr("Go back")}
         />
       </div>
     </div>

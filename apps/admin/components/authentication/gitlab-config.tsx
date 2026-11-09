@@ -16,6 +16,7 @@ import { Switch } from "@makestrata/propel/components/switch";
 import type { TInstanceAuthenticationMethodKeys } from "@strata/types";
 // hooks
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   disabled: boolean;
@@ -34,7 +35,12 @@ export const GitlabConfiguration = observer(function GitlabConfiguration(props: 
     <>
       {isGitlabConfigured ? (
         <div className="flex items-center gap-4">
-          <AnchorButton variant="primary" size="sm" render={<Link href="/authentication/gitlab" />} label="Edit" />
+          <AnchorButton
+            variant="primary"
+            size="sm"
+            render={<Link href="/authentication/gitlab" />}
+            label={tr("Edit")}
+          />
           <Switch
             checked={Boolean(parseInt(enableGitlabConfig))}
             onCheckedChange={() => {
@@ -42,7 +48,7 @@ export const GitlabConfiguration = observer(function GitlabConfiguration(props: 
               updateConfig("IS_GITLAB_ENABLED", newEnableGitlabConfig);
             }}
             size="sm"
-            aria-label="Enable GitLab"
+            aria-label={tr("Enable GitLab")}
             disabled={disabled}
           />
         </div>
@@ -54,7 +60,7 @@ export const GitlabConfiguration = observer(function GitlabConfiguration(props: 
           nativeButton={false}
           render={<Link href="/authentication/gitlab" />}
           icon={<Icon icon={PreferencesOutline} tint="tertiary" />}
-          label="Configure"
+          label={tr("Configure")}
         />
       )}
     </>

@@ -24,6 +24,7 @@ import { useAuthenticationModes } from "@/hooks/oauth";
 import { useInstance } from "@/hooks/store";
 // types
 import type { Route } from "./+types/page";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(_props: Route.ComponentProps) {
   // theme
@@ -56,7 +57,7 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
           if (!canDisable) {
             setToast({
               type: "error",
-              title: "Cannot disable authentication",
+              title: tr("Cannot disable authentication"),
               message:
                 "At least one authentication method must remain enabled. Please enable another method before disabling this one.",
             });
@@ -77,11 +78,11 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
       setPromiseToast(updateConfigPromise, {
         loading: "Saving configuration",
         success: {
-          title: "Success",
+          title: tr("Success"),
           message: () => "Configuration saved successfully",
         },
         error: {
-          title: "Error",
+          title: tr("Error"),
           message: () => "Failed to save configuration",
         },
       });
@@ -114,8 +115,8 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
   return (
     <PageWrapper
       header={{
-        title: "Manage authentication modes for your instance",
-        description: "Configure authentication modes for your team and restrict sign-ups to be invite only.",
+        title: tr("Manage authentication modes for your instance"),
+        description: tr("Configure authentication modes for your team and restrict sign-ups to be invite only."),
       }}
     >
       {formattedConfig ? (
@@ -124,17 +125,17 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
             <div className="flex min-w-0 grow items-center gap-4">
               <div className="min-w-0 grow">
                 <div className="pb-1 text-body-sm-medium text-primary">
-                  Allow anyone to sign up even without an invite
+                  {tr("Allow anyone to sign up even without an invite")}
                 </div>
                 <div className="text-body-xs-regular leading-5 text-tertiary">
-                  Toggling this off will only let users sign up when they are invited.
+                  {tr("Toggling this off will only let users sign up when they are invited.")}
                 </div>
               </div>
             </div>
             <div className={cn("shrink-0", { "opacity-70": isSubmitting })}>
               <div className="flex items-center gap-4">
                 <Switch
-                  aria-label="Allow anyone to sign up even without an invite"
+                  aria-label={tr("Allow anyone to sign up even without an invite")}
                   checked={Boolean(parseInt(enableSignUpConfig))}
                   onCheckedChange={() => {
                     if (Boolean(parseInt(enableSignUpConfig)) === true) {
@@ -149,7 +150,7 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
               </div>
             </div>
           </div>
-          <h3 className="pt-3 text-h6-medium text-primary">Available authentication modes</h3>
+          <h3 className="pt-3 text-h6-medium text-primary">{tr("Available authentication modes")}</h3>
           {authenticationModes.map((method) => (
             <AuthenticationMethodCard
               key={method.key}
@@ -175,6 +176,6 @@ const InstanceAuthenticationPage = observer(function InstanceAuthenticationPage(
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "Authentication Settings - Strata Web" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("Authentication Settings - Strata Web") }];
 
 export default InstanceAuthenticationPage;

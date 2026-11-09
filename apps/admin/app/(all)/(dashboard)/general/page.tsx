@@ -13,6 +13,7 @@ import { useInstance } from "@/hooks/store";
 import { GeneralConfigurationForm } from "./form";
 // types
 import type { Route } from "./+types/page";
+import { tr } from "@/lib/admin-i18n";
 
 function GeneralPage() {
   const { instance, instanceAdmins } = useInstance();
@@ -20,7 +21,7 @@ function GeneralPage() {
   return (
     <PageWrapper
       header={{
-        title: "General settings",
+        title: tr("General settings"),
         description:
           "Change the name of your instance and instance admin e-mail addresses. Enable or disable telemetry in your instance.",
       }}
@@ -30,6 +31,6 @@ function GeneralPage() {
   );
 }
 
-export const meta: Route.MetaFunction = () => [{ title: "General Settings - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("General Settings - God Mode") }];
 
 export default observer(GeneralPage);

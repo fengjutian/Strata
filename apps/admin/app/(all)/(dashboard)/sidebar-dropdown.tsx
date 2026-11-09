@@ -26,6 +26,7 @@ import { AuthService } from "@strata/services";
 import { getFileURL } from "@strata/utils";
 // hooks
 import { useTheme, useUser } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 // service initialization
 const authService = new AuthService();
@@ -65,7 +66,7 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
       <MenuItem
         variant="danger"
         icon={<Icon icon={LogOutOutline} />}
-        label="Sign out"
+        label={tr("Sign out")}
         onClick={() => signOutFormRef.current?.requestSubmit()}
       />
     </MenuContent>
@@ -92,7 +93,7 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
           <Menu>
             <MenuTrigger
               render={
-                <IconButton variant="ghost" size="lg" type="button" aria-label="Instance admin menu">
+                <IconButton variant="ghost" size="lg" type="button" aria-label={tr("Instance admin menu")}>
                   <Icon icon={UserCogOutline} />
                 </IconButton>
               }
@@ -105,12 +106,12 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
           <div className="grid size-8 shrink-0 place-items-center rounded-md bg-layer-1" aria-hidden="true">
             <UserCogOutline className="size-5 text-primary" />
           </div>
-          <h4 className="min-w-0 flex-1 truncate text-body-md-medium text-primary">Instance admin</h4>
+          <h4 className="min-w-0 flex-1 truncate text-body-md-medium text-primary">{tr("Instance admin")}</h4>
           {currentUser && (
             <Menu>
               <MenuTrigger
                 render={
-                  <IconButton variant="ghost" size="lg" type="button" aria-label="Account menu">
+                  <IconButton variant="ghost" size="lg" type="button" aria-label={tr("Account menu")}>
                     <Avatar
                       alt={currentUser.display_name ?? "Admin user"}
                       fallback={currentUser.display_name?.[0]?.toUpperCase()}

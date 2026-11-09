@@ -10,6 +10,7 @@ import { observer } from "mobx-react";
 import { Switch } from "@makestrata/propel/components/switch";
 import type { TInstanceAuthenticationMethodKeys } from "@strata/types";
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 // ui
 // types
 
@@ -33,7 +34,7 @@ export const EmailCodesConfiguration = observer(function EmailCodesConfiguration
         updateConfig("ENABLE_MAGIC_LINK_LOGIN", newEnableMagicLogin);
       }}
       size="sm"
-      aria-label="Enable login with email codes"
+      aria-label={tr("Enable login with email codes")}
       disabled={disabled}
     />
   );

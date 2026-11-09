@@ -16,6 +16,7 @@ import { Switch } from "@makestrata/propel/components/switch";
 import type { TInstanceAuthenticationMethodKeys } from "@strata/types";
 // hooks
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   disabled: boolean;
@@ -35,7 +36,7 @@ export const GiteaConfiguration = observer(function GiteaConfiguration(props: Pr
     <>
       {GiteaConfigured ? (
         <div className="flex items-center gap-4">
-          <AnchorButton variant="primary" size="sm" render={<Link href="/authentication/gitea" />} label="Edit" />
+          <AnchorButton variant="primary" size="sm" render={<Link href="/authentication/gitea" />} label={tr("Edit")} />
           <Switch
             checked={Boolean(parseInt(GiteaConfig))}
             onCheckedChange={() => {
@@ -44,7 +45,7 @@ export const GiteaConfiguration = observer(function GiteaConfiguration(props: Pr
                 : updateConfig("IS_GITEA_ENABLED", "1");
             }}
             size="sm"
-            aria-label="Enable Gitea"
+            aria-label={tr("Enable Gitea")}
             disabled={disabled}
           />
         </div>
@@ -56,7 +57,7 @@ export const GiteaConfiguration = observer(function GiteaConfiguration(props: Pr
           nativeButton={false}
           render={<Link href="/authentication/gitea" />}
           icon={<Icon icon={PreferencesOutline} tint="tertiary" />}
-          label="Configure"
+          label={tr("Configure")}
         />
       )}
     </>

@@ -16,6 +16,7 @@ import type { TCopyField } from "@/components/common/copy-field";
 import { OAuthProviderForm } from "@/components/authentication/oauth-provider-form";
 // hooks
 import { useOAuthProviderConfigForm } from "@/hooks/use-oauth-provider-config-form";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   config: IFormattedInstanceConfiguration;
@@ -48,10 +49,11 @@ export function InstanceGitlabConfigForm(props: Props) {
     {
       key: "GITLAB_HOST",
       type: "text",
-      label: "Host",
+      label: tr("Host"),
       description: (
         <>
-          This is either https://gitlab.com or the <CodeBlock>domain.tld</CodeBlock> where you host GitLab.
+          {tr("This is either https://gitlab.com or the")}
+          <CodeBlock>domain.tld</CodeBlock> where you host GitLab.
         </>
       ),
       placeholder: "https://gitlab.com",
@@ -61,7 +63,7 @@ export function InstanceGitlabConfigForm(props: Props) {
     {
       key: "GITLAB_CLIENT_ID",
       type: "text",
-      label: "Application ID",
+      label: tr("Application ID"),
       description: (
         <>
           Get this from your{" "}
@@ -71,7 +73,7 @@ export function InstanceGitlabConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            GitLab OAuth application settings
+            {tr("GitLab OAuth application settings")}
           </a>
           .
         </>
@@ -83,7 +85,7 @@ export function InstanceGitlabConfigForm(props: Props) {
     {
       key: "GITLAB_CLIENT_SECRET",
       type: "password",
-      label: "Secret",
+      label: tr("Secret"),
       description: (
         <>
           The client secret is also found in your{" "}
@@ -93,7 +95,7 @@ export function InstanceGitlabConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            GitLab OAuth application settings
+            {tr("GitLab OAuth application settings")}
           </a>
           .
         </>
@@ -107,18 +109,19 @@ export function InstanceGitlabConfigForm(props: Props) {
   const GITLAB_SERVICE_FIELD: TCopyField[] = [
     {
       key: "Callback_URL",
-      label: "Callback URL",
+      label: tr("Callback URL"),
       url: `${originURL}/auth/gitlab/callback/`,
       description: (
         <>
-          We will auto-generate this. Paste this into the <CodeBlock darkerShade>Redirect URI</CodeBlock> field of your{" "}
+          {tr("We will auto-generate this. Paste this into the")}
+          <CodeBlock darkerShade>{tr("Redirect URI")}</CodeBlock> field of your{" "}
           <a
             href="https://docs.gitlab.com/ee/integration/oauth_provider.html"
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            GitLab OAuth application
+            {tr("GitLab OAuth application")}
           </a>
           .
         </>

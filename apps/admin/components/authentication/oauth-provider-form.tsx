@@ -20,6 +20,7 @@ import type { TControllerSwitchFormField } from "@/components/common/controller-
 import { ControllerSwitch } from "@/components/common/controller-switch";
 import type { TCopyField } from "@/components/common/copy-field";
 import { CopyField } from "@/components/common/copy-field";
+import { tr } from "@/lib/admin-i18n";
 
 type Props<T extends FieldValues> = {
   providerName: string;
@@ -88,7 +89,7 @@ export function OAuthProviderForm<T extends FieldValues>(props: Props<T>) {
                   stretch="auto"
                   nativeButton={false}
                   render={<Link href="/authentication" onClick={handleGoBack} />}
-                  label="Go back"
+                  label={tr("Go back")}
                 />
               </div>
             </div>
@@ -105,7 +106,7 @@ export function OAuthProviderForm<T extends FieldValues>(props: Props<T>) {
                 <div className="flex flex-col overflow-hidden rounded-lg">
                   <div className="flex items-center gap-x-2 bg-layer-3 px-6 py-3 text-caption-sm-medium text-secondary uppercase">
                     <MonitorOutline className="size-3.5" />
-                    Web
+                    {tr("Web")}
                   </div>
                   <div className="flex flex-col gap-y-4 bg-layer-1 px-6 py-4">
                     {webServiceDetails.map((field) => (

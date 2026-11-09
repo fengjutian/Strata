@@ -21,6 +21,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceGoogleConfigForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceGoogleAuthenticationPage = observer(function InstanceGoogleAuthenticationPage(
   _props: Route.ComponentProps
@@ -46,11 +47,11 @@ const InstanceGoogleAuthenticationPage = observer(function InstanceGoogleAuthent
     setPromiseToast(updateConfigPromise, {
       loading: "Saving Configuration",
       success: {
-        title: "Configuration saved",
+        title: tr("Configuration saved"),
         message: () => `Google authentication is now ${value === "1" ? "active" : "disabled"}.`,
       },
       error: {
-        title: "Error",
+        title: tr("Error"),
         message: () => "Failed to save configuration",
       },
     });
@@ -69,12 +70,11 @@ const InstanceGoogleAuthenticationPage = observer(function InstanceGoogleAuthent
       customHeader={
         <AuthenticationMethodCard
           name="Google"
-          description="Allow members to login or sign up to strata with their Google
-            accounts."
-          icon={<img src={GoogleLogo} height={24} width={24} alt="Google Logo" />}
+          description={tr("Allow members to login or sign up to strata with their Google accounts.")}
+          icon={<img src={GoogleLogo} height={24} width={24} alt={tr("Google Logo")} />}
           config={
             <Switch
-              aria-label="Enable Google authentication"
+              aria-label={tr("Enable Google authentication")}
               checked={Boolean(parseInt(enableGoogleConfig))}
               onCheckedChange={() => {
                 if (Boolean(parseInt(enableGoogleConfig)) === true) {
@@ -107,6 +107,6 @@ const InstanceGoogleAuthenticationPage = observer(function InstanceGoogleAuthent
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "Google Authentication - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("Google Authentication - God Mode") }];
 
 export default InstanceGoogleAuthenticationPage;

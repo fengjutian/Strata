@@ -24,6 +24,7 @@ import { GithubConfiguration } from "@/components/authentication/github-config";
 import { GitlabConfiguration } from "@/components/authentication/gitlab-config";
 import { GoogleConfiguration } from "@/components/authentication/google-config";
 import { PasswordLoginConfiguration } from "@/components/authentication/password-config-switch";
+import { tr } from "@/lib/admin-i18n";
 
 // Authentication methods
 export const getCoreAuthenticationModesMap: (
@@ -53,21 +54,21 @@ export const getCoreAuthenticationModesMap: (
   google: {
     key: "google",
     name: "Google",
-    description: "Allow members to log in or sign up for Strata with their Google accounts.",
-    icon: <img src={googleLogo} height={20} width={20} alt="Google Logo" />,
+    description: tr("Allow members to log in or sign up for Strata with their Google accounts."),
+    icon: <img src={googleLogo} height={20} width={20} alt={tr("Google Logo")} />,
     config: <GoogleConfiguration disabled={disabled} updateConfig={updateConfig} />,
     enabledConfigKey: "IS_GOOGLE_ENABLED",
   },
   github: {
     key: "github",
     name: "GitHub",
-    description: "Allow members to log in or sign up for Strata with their GitHub accounts.",
+    description: tr("Allow members to log in or sign up for Strata with their GitHub accounts."),
     icon: (
       <img
         src={resolvedTheme === "dark" ? githubDarkModeImage : githubLightModeImage}
         height={20}
         width={20}
-        alt="GitHub Logo"
+        alt={tr("GitHub Logo")}
       />
     ),
     config: <GithubConfiguration disabled={disabled} updateConfig={updateConfig} />,
@@ -76,16 +77,16 @@ export const getCoreAuthenticationModesMap: (
   gitlab: {
     key: "gitlab",
     name: "GitLab",
-    description: "Allow members to log in or sign up to strata with their GitLab accounts.",
-    icon: <img src={gitlabLogo} height={20} width={20} alt="GitLab Logo" />,
+    description: tr("Allow members to log in or sign up to strata with their GitLab accounts."),
+    icon: <img src={gitlabLogo} height={20} width={20} alt={tr("GitLab Logo")} />,
     config: <GitlabConfiguration disabled={disabled} updateConfig={updateConfig} />,
     enabledConfigKey: "IS_GITLAB_ENABLED",
   },
   gitea: {
     key: "gitea",
     name: "Gitea",
-    description: "Allow members to log in or sign up to strata with their Gitea accounts.",
-    icon: <img src={giteaLogo} height={20} width={20} alt="Gitea Logo" />,
+    description: tr("Allow members to log in or sign up to strata with their Gitea accounts."),
+    icon: <img src={giteaLogo} height={20} width={20} alt={tr("Gitea Logo")} />,
     config: <GiteaConfiguration disabled={disabled} updateConfig={updateConfig} />,
     enabledConfigKey: "IS_GITEA_ENABLED",
   },

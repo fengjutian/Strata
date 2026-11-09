@@ -20,6 +20,7 @@ import { useTheme } from "@/hooks/store";
 // local imports
 import { CORE_HEADER_SEGMENT_LABELS } from "./core";
 import { EXTENDED_HEADER_SEGMENT_LABELS } from "./extended";
+import { tr } from "@/lib/admin-i18n";
 
 export const HamburgerToggle = observer(function HamburgerToggle() {
   const { isSidebarCollapsed, toggleSidebar } = useTheme();
@@ -28,7 +29,7 @@ export const HamburgerToggle = observer(function HamburgerToggle() {
       <IconButton
         variant="ghost"
         size="md"
-        aria-label="Toggle sidebar"
+        aria-label={tr("Toggle sidebar")}
         aria-expanded={!isSidebarCollapsed}
         aria-controls="admin-sidebar"
         icon={<Icon icon={MenuOutline} />}
@@ -104,7 +105,11 @@ export const AdminHeader = observer(function AdminHeader() {
             crumbLabel="Settings"
             crumbHref={resolveCrumbHref("/general/")}
             component={
-              <HeaderCrumb label="Settings" href="/general/" icon={<SettingsOutline className="text-tertiary" />} />
+              <HeaderCrumb
+                label={tr("Settings")}
+                href="/general/"
+                icon={<SettingsOutline className="text-tertiary" />}
+              />
             }
           />
           {breadcrumbItems.map((item, index) => {

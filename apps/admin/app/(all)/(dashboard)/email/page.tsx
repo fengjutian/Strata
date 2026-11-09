@@ -18,6 +18,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceEmailForm } from "./email-config-form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceEmailPage = observer(function InstanceEmailPage(_props: Route.ComponentProps) {
   // store
@@ -35,14 +36,14 @@ const InstanceEmailPage = observer(function InstanceEmailPage(_props: Route.Comp
         await disableEmail();
         setIsSMTPEnabled(false);
         setToast({
-          title: "Email feature disabled",
-          message: "Email feature has been disabled",
+          title: tr("Email feature disabled"),
+          message: tr("Email feature has been disabled"),
           type: "success",
         });
       } catch (_error) {
         setToast({
-          title: "Error disabling email",
-          message: "Failed to disable email feature. Please try again.",
+          title: tr("Error disabling email"),
+          message: tr("Failed to disable email feature. Please try again."),
           type: "error",
         });
       } finally {
@@ -61,13 +62,15 @@ const InstanceEmailPage = observer(function InstanceEmailPage(_props: Route.Comp
   return (
     <PageWrapper
       header={{
-        title: "Secure emails from your own instance",
+        title: tr("Secure emails from your own instance"),
         description: (
           <>
-            Strata can send useful emails to you and your users from your own instance without talking to the Internet.
+            {tr(
+              "Strata can send useful emails to you and your users from your own instance without talking to the Internet."
+            )}
             <div className="text-body-xs-regular text-tertiary">
-              Set it up below and please test your settings before you save them.&nbsp;
-              <span className="text-danger-primary">Misconfigs can lead to email bounces and errors.</span>
+              {tr("Set it up below and please test your settings before you save them.&nbsp;")}
+              <span className="text-danger-primary">{tr("Misconfigs can lead to email bounces and errors.")}</span>
             </div>
           </>
         ),
@@ -77,7 +80,7 @@ const InstanceEmailPage = observer(function InstanceEmailPage(_props: Route.Comp
           </Skeleton>
         ) : (
           <Switch
-            aria-label="Enable SMTP email"
+            aria-label={tr("Enable SMTP email")}
             checked={isSMTPEnabled}
             onCheckedChange={handleToggle}
             size="sm"
@@ -105,6 +108,6 @@ const InstanceEmailPage = observer(function InstanceEmailPage(_props: Route.Comp
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "Email Settings - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("Email Settings - God Mode") }];
 
 export default InstanceEmailPage;

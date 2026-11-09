@@ -15,6 +15,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceAIForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceAIPage = observer(function InstanceAIPage(_props: Route.ComponentProps) {
   // store
@@ -25,7 +26,7 @@ const InstanceAIPage = observer(function InstanceAIPage(_props: Route.ComponentP
   return (
     <PageWrapper
       header={{
-        title: "AI features for all your workspaces",
+        title: tr("AI features for all your workspaces"),
         description: "Configure your AI API credentials so Strata AI features are turned on for all your workspaces.",
       }}
     >

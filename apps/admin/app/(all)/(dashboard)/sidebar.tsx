@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/store";
 import { AdminSidebarDropdown } from "./sidebar-dropdown";
 import { AdminSidebarHelpSection } from "./sidebar-help-section";
 import { AdminSidebarMenu } from "./sidebar-menu";
+import { tr } from "@/lib/admin-i18n";
 
 // Below the `md` breakpoint the sidebar overlays the page instead of sitting beside it.
 const isMobileViewport = () => window.innerWidth < 768;
@@ -61,7 +62,7 @@ export const AdminSidebar = observer(function AdminSidebar() {
       )}
       <aside
         id="admin-sidebar"
-        aria-label="Instance admin"
+        aria-label={tr("Instance admin")}
         className={cn(
           "fixed inset-y-0 left-0 z-30 flex h-full w-72 shrink-0 flex-col border-r border-subtle bg-surface-1 transition-[width,transform] duration-300 motion-reduce:transition-none md:relative md:translate-x-0",
           {

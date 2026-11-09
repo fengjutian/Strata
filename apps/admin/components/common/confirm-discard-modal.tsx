@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 // strata imports
 import { ConfirmDialog } from "@strata/blocks/dialog";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export function ConfirmDiscardModal(props: Props) {
       isSubmitting={false}
       variant="primary"
       hideIcon
-      title="You have unsaved changes"
+      title={tr("You have unsaved changes")}
       content="Changes you made will be lost if you go back. Do you wish to go back?"
       primaryButtonText={{ default: "Go back" }}
       secondaryButtonText="Keep editing"

@@ -18,6 +18,7 @@ import { cn } from "@strata/utils";
 import { useTheme } from "@/hooks/store";
 import { useSidebarMenu } from "@/hooks/use-sidebar-menu";
 import type { TSidebarMenuItem } from "@/hooks/use-sidebar-menu/types";
+import { tr } from "@/lib/admin-i18n";
 
 type TAdminSidebarMenuItemProps = {
   item: TSidebarMenuItem;
@@ -77,7 +78,7 @@ export const AdminSidebarMenu = observer(function AdminSidebarMenu() {
 
   return (
     <ScrollArea orientation="vertical" size="sm">
-      <nav aria-label="Instance settings" className="px-3 py-4">
+      <nav aria-label={tr("Instance settings")} className="px-3 py-4">
         <List>
           {sidebarMenu.map((item) => (
             <AdminSidebarMenuItem

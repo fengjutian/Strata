@@ -17,6 +17,7 @@ import type { TCopyField } from "@/components/common/copy-field";
 import { OAuthProviderForm } from "@/components/authentication/oauth-provider-form";
 // hooks
 import { useOAuthProviderConfigForm } from "@/hooks/use-oauth-provider-config-form";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   config: IFormattedInstanceConfiguration;
@@ -51,9 +52,13 @@ export function InstanceGiteaConfigForm(props: Props) {
     {
       key: "GITEA_HOST",
       type: "text",
-      label: "Gitea Host",
+      label: tr("Gitea Host"),
       description: (
-        <>Use the URL of your Gitea instance. For the official Gitea instance, use &quot;https://gitea.com&quot;.</>
+        <>
+          {tr(
+            "Use the URL of your Gitea instance. For the official Gitea instance, use &quot;https://gitea.com&quot;."
+          )}
+        </>
       ),
       placeholder: "https://gitea.com",
       error: Boolean(errors.GITEA_HOST),
@@ -62,7 +67,7 @@ export function InstanceGiteaConfigForm(props: Props) {
     {
       key: "GITEA_CLIENT_ID",
       type: "text",
-      label: "Client ID",
+      label: tr("Client ID"),
       description: (
         <>
           You will get this from your{" "}
@@ -72,7 +77,7 @@ export function InstanceGiteaConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            Gitea OAuth application settings.
+            {tr("Gitea OAuth application settings.")}
           </a>
         </>
       ),
@@ -83,7 +88,7 @@ export function InstanceGiteaConfigForm(props: Props) {
     {
       key: "GITEA_CLIENT_SECRET",
       type: "password",
-      label: "Client secret",
+      label: tr("Client secret"),
       description: (
         <>
           Your client secret is also found in your{" "}
@@ -93,7 +98,7 @@ export function InstanceGiteaConfigForm(props: Props) {
             className="text-accent-primary hover:underline"
             rel="noreferrer"
           >
-            Gitea OAuth application settings.
+            {tr("Gitea OAuth application settings.")}
           </a>
         </>
       ),
@@ -106,18 +111,18 @@ export function InstanceGiteaConfigForm(props: Props) {
   const GITEA_SERVICE_FIELD: TCopyField[] = [
     {
       key: "Callback_URI",
-      label: "Callback URI",
+      label: tr("Callback URI"),
       url: `${originURL}/auth/gitea/callback/`,
       description: (
         <>
-          We will auto-generate this. Paste this into your <CodeBlock darkerShade>Authorized Callback URI</CodeBlock>{" "}
-          field{" "}
+          {tr("We will auto-generate this. Paste this into your")}
+          <CodeBlock darkerShade>{tr("Authorized Callback URI")}</CodeBlock> field{" "}
           <a
             href={`${giteaHost || "https://gitea.com"}/user/settings/applications`}
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="Gitea OAuth application settings"
+            aria-label={tr("Gitea OAuth application settings")}
           >
             here.
           </a>

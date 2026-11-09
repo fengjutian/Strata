@@ -16,6 +16,7 @@ import type { TCopyField } from "@/components/common/copy-field";
 import { OAuthProviderForm } from "@/components/authentication/oauth-provider-form";
 // hooks
 import { useOAuthProviderConfigForm } from "@/hooks/use-oauth-provider-config-form";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   config: IFormattedInstanceConfiguration;
@@ -47,7 +48,7 @@ export function InstanceGoogleConfigForm(props: Props) {
     {
       key: "GOOGLE_CLIENT_ID",
       type: "text",
-      label: "Client ID",
+      label: tr("Client ID"),
       description: (
         <>
           Your client ID lives in your Google API Console.{" "}
@@ -56,9 +57,9 @@ export function InstanceGoogleConfigForm(props: Props) {
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="Google OAuth client ID documentation"
+            aria-label={tr("Google OAuth client ID documentation")}
           >
-            Learn more
+            {tr("Learn more")}
           </a>
         </>
       ),
@@ -69,7 +70,7 @@ export function InstanceGoogleConfigForm(props: Props) {
     {
       key: "GOOGLE_CLIENT_SECRET",
       type: "password",
-      label: "Client secret",
+      label: tr("Client secret"),
       description: (
         <>
           Your client secret should also be in your Google API Console.{" "}
@@ -78,9 +79,9 @@ export function InstanceGoogleConfigForm(props: Props) {
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="Google OAuth client secret documentation"
+            aria-label={tr("Google OAuth client secret documentation")}
           >
-            Learn more
+            {tr("Learn more")}
           </a>
         </>
       ),
@@ -93,18 +94,18 @@ export function InstanceGoogleConfigForm(props: Props) {
   const GOOGLE_COMMON_SERVICE_DETAILS: TCopyField[] = [
     {
       key: "Origin_URL",
-      label: "Origin URL",
+      label: tr("Origin URL"),
       url: originURL,
       description: (
         <p>
           We will auto-generate this. Paste this into your{" "}
-          <CodeBlock darkerShade>Authorized JavaScript origins</CodeBlock> field. For this OAuth client{" "}
+          <CodeBlock darkerShade>{tr("Authorized JavaScript origins")}</CodeBlock> field. For this OAuth client{" "}
           <a
             href="https://console.cloud.google.com/apis/credentials/oauthclient"
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="Google Cloud Console OAuth client credentials"
+            aria-label={tr("Google Cloud Console OAuth client credentials")}
           >
             here.
           </a>
@@ -116,18 +117,18 @@ export function InstanceGoogleConfigForm(props: Props) {
   const GOOGLE_SERVICE_DETAILS: TCopyField[] = [
     {
       key: "Callback_URI",
-      label: "Callback URI",
+      label: tr("Callback URI"),
       url: `${originURL}/auth/google/callback/`,
       description: (
         <p>
-          We will auto-generate this. Paste this into your <CodeBlock darkerShade>Authorized Redirect URI</CodeBlock>{" "}
-          field. For this OAuth client{" "}
+          {tr("We will auto-generate this. Paste this into your")}
+          <CodeBlock darkerShade>{tr("Authorized Redirect URI")}</CodeBlock> field. For this OAuth client{" "}
           <a
             href="https://console.cloud.google.com/apis/credentials/oauthclient"
             target="_blank"
             className="text-accent-primary hover:underline"
             rel="noreferrer"
-            aria-label="Google Cloud Console OAuth client credentials"
+            aria-label={tr("Google Cloud Console OAuth client credentials")}
           >
             here.
           </a>

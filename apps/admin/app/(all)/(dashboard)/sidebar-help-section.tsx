@@ -25,6 +25,7 @@ import { cn } from "@strata/utils";
 import { ensureTrailingSlash } from "@/app/compat/next/helper";
 // hooks
 import { useInstance, useTheme } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 // assets
 
 const helpOptions = [
@@ -64,14 +65,14 @@ export const AdminSidebarHelpSection = observer(function AdminSidebarHelpSection
       })}
     >
       {isSidebarCollapsed ? (
-        <Tooltip label="Redirect to Strata" side="right">
+        <Tooltip label={tr("Redirect to Strata")} side="right">
           <IconButton
             variant="secondary"
             size="md"
-            aria-label="Redirect to Strata"
+            aria-label={tr("Redirect to Strata")}
             showTooltip={false}
             nativeButton={false}
-            render={<a href={redirectionLink} aria-label="Redirect to Strata" />}
+            render={<a href={redirectionLink} aria-label={tr("Redirect to Strata")} />}
             icon={<Icon icon={NewTabOutline} />}
           />
         </Tooltip>
@@ -81,21 +82,21 @@ export const AdminSidebarHelpSection = observer(function AdminSidebarHelpSection
           size="sm"
           stretch="auto"
           nativeButton={false}
-          render={<a href={redirectionLink} aria-label="Redirect to Strata" />}
+          render={<a href={redirectionLink} aria-label={tr("Redirect to Strata")} />}
           icon={<Icon icon={NewTabOutline} />}
-          label="Redirect to Strata"
+          label={tr("Redirect to Strata")}
         />
       )}
       <div className={cn("flex items-center gap-1", isSidebarCollapsed ? "flex-col" : "ml-auto")}>
         <Menu modal={false}>
-          <Tooltip label="Help" side={isSidebarCollapsed ? "right" : "top"}>
+          <Tooltip label={tr("Help")} side={isSidebarCollapsed ? "right" : "top"}>
             <MenuTrigger
               render={
                 <IconButton
                   type="button"
                   variant="ghost"
                   size="md"
-                  aria-label="Help"
+                  aria-label={tr("Help")}
                   showTooltip={false}
                   icon={<Icon icon={HelpOutline} />}
                 />

@@ -19,6 +19,7 @@ import {
 } from "@makestrata/propel/components/dialog";
 import { InputField } from "@makestrata/propel/components/input-field";
 import { InstanceService } from "@strata/services";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   isOpen: boolean;
@@ -101,10 +102,10 @@ export function SendTestEmailModal(props: Props) {
                 type="email"
                 size="lg"
                 orientation="vertical"
-                label="Receiver email"
+                label={tr("Receiver email")}
                 value={receiverEmail}
                 onChange={(e) => setReceiverEmail(e.target.value)}
-                placeholder="Receiver email"
+                placeholder={tr("Receiver email")}
                 autoComplete="email"
                 tabIndex={0}
               />
@@ -114,7 +115,9 @@ export function SendTestEmailModal(props: Props) {
                 <p>
                   We have sent the test email to {receiverEmail}. Please check your spam folder if you cannot find it.
                 </p>
-                <p>If you still cannot find it, recheck your SMTP configuration and trigger a new test email.</p>
+                <p>
+                  {tr("If you still cannot find it, recheck your SMTP configuration and trigger a new test email.")}
+                </p>
               </div>
             )}
             {sendEmailStep === ESendEmailSteps.FAILED && <div className="text-body-xs-regular">{error}</div>}

@@ -18,6 +18,7 @@ import { setToast } from "@strata/blocks/toast";
 import { useInstance } from "@/hooks/store";
 // local components
 import { SendTestEmailModal } from "./test-email-modal";
+import { tr } from "@/lib/admin-i18n";
 
 type IInstanceEmailForm = {
   config: IFormattedInstanceConfiguration;
@@ -64,7 +65,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
     {
       key: "EMAIL_HOST",
       type: "text",
-      label: "Host",
+      label: tr("Host"),
       placeholder: "email.google.com",
       error: Boolean(errors.EMAIL_HOST),
       required: true,
@@ -72,7 +73,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
     {
       key: "EMAIL_PORT",
       type: "text",
-      label: "Port",
+      label: tr("Port"),
       placeholder: "8080",
       error: Boolean(errors.EMAIL_PORT),
       required: true,
@@ -80,7 +81,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
     {
       key: "EMAIL_FROM",
       type: "text",
-      label: "Sender's email address",
+      label: tr("Sender's email address"),
       description:
         "This is the email address your users will see when getting emails from this instance. You will need to verify this address.",
       placeholder: "no-reply@projectstrata.so",
@@ -93,7 +94,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
     {
       key: "EMAIL_HOST_USER",
       type: "text",
-      label: "Username",
+      label: tr("Username"),
       placeholder: "getitdone@projectstrata.so",
       error: Boolean(errors.EMAIL_HOST_USER),
       required: false,
@@ -101,7 +102,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
     {
       key: "EMAIL_HOST_PASSWORD",
       type: "password",
-      label: "Password",
+      label: tr("Password"),
       placeholder: "Password",
       error: Boolean(errors.EMAIL_HOST_PASSWORD),
       required: false,
@@ -117,8 +118,8 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
       reset(payload);
       setToast({
         type: "success",
-        title: "Success",
-        message: "Email Settings updated successfully",
+        title: tr("Success"),
+        message: tr("Email Settings updated successfully"),
       });
     } catch (err) {
       console.error(err);
@@ -168,7 +169,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
           ))}
           <div className="flex flex-col gap-1">
             <span id={emailSecurityLabelId} className="text-body-xs-medium text-primary">
-              Email security
+              {tr("Email security")}
             </span>
             <Select
               items={EMAIL_SECURITY_OPTIONS}
@@ -178,7 +179,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
               <SelectTrigger
                 variant="secondary"
                 size="lg"
-                placeholder="Select email security"
+                placeholder={tr("Select email security")}
                 aria-labelledby={emailSecurityLabelId}
               />
               <SelectContent>
@@ -195,9 +196,9 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
           <div className="flex w-full max-w-xl flex-col gap-y-10 px-1">
             <div className="mr-8 flex items-center gap-10 pt-4">
               <div className="grow">
-                <div className="text-body-xs-medium text-primary">Authentication</div>
+                <div className="text-body-xs-medium text-primary">{tr("Authentication")}</div>
                 <div className="text-caption-sm-regular text-tertiary">
-                  This is optional, but we recommend setting up a username and a password for your SMTP server.
+                  {tr("This is optional, but we recommend setting up a username and a password for your SMTP server.")}
                 </div>
               </div>
             </div>
@@ -236,7 +237,7 @@ export function InstanceEmailForm(props: IInstanceEmailForm) {
           onClick={() => setIsSendTestEmailModalOpen(true)}
           loading={isSubmitting}
           disabled={!isValid}
-          label="Send test email"
+          label={tr("Send test email")}
         />
       </div>
     </div>

@@ -22,6 +22,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceGiteaConfigForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceGiteaAuthenticationPage = observer(function InstanceGiteaAuthenticationPage() {
   // store
@@ -44,11 +45,11 @@ const InstanceGiteaAuthenticationPage = observer(function InstanceGiteaAuthentic
     setPromiseToast(updateConfigPromise, {
       loading: "Saving Configuration",
       success: {
-        title: "Configuration saved",
+        title: tr("Configuration saved"),
         message: () => `Gitea authentication is now ${value === "1" ? "active" : "disabled"}.`,
       },
       error: {
-        title: "Error",
+        title: tr("Error"),
         message: () => "Failed to save configuration",
       },
     });
@@ -70,11 +71,11 @@ const InstanceGiteaAuthenticationPage = observer(function InstanceGiteaAuthentic
       customHeader={
         <AuthenticationMethodCard
           name="Gitea"
-          description="Allow members to login or sign up to strata with their Gitea accounts."
-          icon={<img src={giteaLogo} height={24} width={24} alt="Gitea Logo" />}
+          description={tr("Allow members to login or sign up to strata with their Gitea accounts.")}
+          icon={<img src={giteaLogo} height={24} width={24} alt={tr("Gitea Logo")} />}
           config={
             <Switch
-              aria-label="Enable Gitea authentication"
+              aria-label={tr("Enable Gitea authentication")}
               checked={isGiteaEnabled}
               onCheckedChange={() => {
                 updateConfig("IS_GITEA_ENABLED", isGiteaEnabled ? "0" : "1");
@@ -102,6 +103,6 @@ const InstanceGiteaAuthenticationPage = observer(function InstanceGiteaAuthentic
     </PageWrapper>
   );
 });
-export const meta: Route.MetaFunction = () => [{ title: "Gitea Authentication - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("Gitea Authentication - God Mode") }];
 
 export default InstanceGiteaAuthenticationPage;

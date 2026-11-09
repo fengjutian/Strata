@@ -25,6 +25,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceGithubConfigForm } from "./form";
+import { tr } from "@/lib/admin-i18n";
 
 const InstanceGithubAuthenticationPage = observer(function InstanceGithubAuthenticationPage(
   _props: Route.ComponentProps
@@ -52,11 +53,11 @@ const InstanceGithubAuthenticationPage = observer(function InstanceGithubAuthent
     setPromiseToast(updateConfigPromise, {
       loading: "Saving Configuration",
       success: {
-        title: "Configuration saved",
+        title: tr("Configuration saved"),
         message: () => `GitHub authentication is now ${value === "1" ? "active" : "disabled"}.`,
       },
       error: {
-        title: "Error",
+        title: tr("Error"),
         message: () => "Failed to save configuration",
       },
     });
@@ -78,18 +79,18 @@ const InstanceGithubAuthenticationPage = observer(function InstanceGithubAuthent
       customHeader={
         <AuthenticationMethodCard
           name="GitHub"
-          description="Allow members to login or sign up to strata with their GitHub accounts."
+          description={tr("Allow members to login or sign up to strata with their GitHub accounts.")}
           icon={
             <img
               src={resolveGeneralTheme(resolvedTheme) === "dark" ? githubDarkModeImage : githubLightModeImage}
               height={24}
               width={24}
-              alt="GitHub Logo"
+              alt={tr("GitHub Logo")}
             />
           }
           config={
             <Switch
-              aria-label="Enable GitHub authentication"
+              aria-label={tr("Enable GitHub authentication")}
               checked={isGithubEnabled}
               onCheckedChange={() => {
                 updateConfig("IS_GITHUB_ENABLED", isGithubEnabled ? "0" : "1");
@@ -118,6 +119,6 @@ const InstanceGithubAuthenticationPage = observer(function InstanceGithubAuthent
   );
 });
 
-export const meta: Route.MetaFunction = () => [{ title: "GitHub Authentication - God Mode" }];
+export const meta: Route.MetaFunction = () => [{ title: tr("GitHub Authentication - God Mode") }];
 
 export default InstanceGithubAuthenticationPage;

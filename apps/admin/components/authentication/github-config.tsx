@@ -16,6 +16,7 @@ import { Switch } from "@makestrata/propel/components/switch";
 import type { TInstanceAuthenticationMethodKeys } from "@strata/types";
 // hooks
 import { useInstance } from "@/hooks/store";
+import { tr } from "@/lib/admin-i18n";
 
 type Props = {
   disabled: boolean;
@@ -34,7 +35,12 @@ export const GithubConfiguration = observer(function GithubConfiguration(props: 
     <>
       {isGithubConfigured ? (
         <div className="flex items-center gap-4">
-          <AnchorButton variant="primary" size="sm" render={<Link href="/authentication/github" />} label="Edit" />
+          <AnchorButton
+            variant="primary"
+            size="sm"
+            render={<Link href="/authentication/github" />}
+            label={tr("Edit")}
+          />
           <Switch
             checked={Boolean(parseInt(enableGithubConfig))}
             onCheckedChange={() => {
@@ -42,7 +48,7 @@ export const GithubConfiguration = observer(function GithubConfiguration(props: 
               updateConfig("IS_GITHUB_ENABLED", newEnableGithubConfig);
             }}
             size="sm"
-            aria-label="Enable GitHub"
+            aria-label={tr("Enable GitHub")}
             disabled={disabled}
           />
         </div>
@@ -54,7 +60,7 @@ export const GithubConfiguration = observer(function GithubConfiguration(props: 
           nativeButton={false}
           render={<Link href="/authentication/github" />}
           icon={<Icon icon={PreferencesOutline} tint="tertiary" />}
-          label="Configure"
+          label={tr("Configure")}
         />
       )}
     </>

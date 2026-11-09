@@ -20,6 +20,7 @@ import "@fontsource-variable/inter";
 import interVariableWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import "@fontsource/material-symbols-rounded";
 import "@fontsource/ibm-plex-mono";
+import { tr } from "@/lib/admin-i18n";
 
 const APP_TITLE = "Strata | Simple, extensible, open-source project management tool.";
 const APP_DESCRIPTION =
@@ -91,7 +92,7 @@ export function HydrateFallback() {
 export function ErrorBoundary({ error: _error }: Route.ErrorBoundaryProps) {
   return (
     <div>
-      <p>Something went wrong.</p>
+      <p>{tr("Something went wrong.")}</p>
     </div>
   );
 }

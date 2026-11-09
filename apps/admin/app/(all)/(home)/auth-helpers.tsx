@@ -8,6 +8,7 @@ import Link from "next/link";
 // strata packages
 import type { TAdminAuthErrorInfo } from "@strata/constants";
 import { SUPPORT_EMAIL, EAdminAuthErrorCodes } from "@strata/constants";
+import { tr } from "@/lib/admin-i18n";
 
 export enum EErrorAlertType {
   BANNER_ALERT = "BANNER_ALERT",
@@ -49,9 +50,9 @@ const errorCodeMessages: {
     title: `Admin user already exists`,
     message: () => (
       <div>
-        Admin user already exists.&nbsp;
+        {tr("Admin user already exists.&nbsp;")}
         <Link className="font-medium underline underline-offset-4 transition-all hover:font-bold" href={`/admin`}>
-          Sign In
+          {tr("Sign In")}
         </Link>
         &nbsp;now.
       </div>
@@ -61,9 +62,9 @@ const errorCodeMessages: {
     title: `Admin user does not exist`,
     message: () => (
       <div>
-        Admin user does not exist.&nbsp;
+        {tr("Admin user does not exist.&nbsp;")}
         <Link className="font-medium underline underline-offset-4 transition-all hover:font-bold" href={`/admin`}>
-          Sign In
+          {tr("Sign In")}
         </Link>
         &nbsp;now.
       </div>

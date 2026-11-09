@@ -47,6 +47,9 @@ pnpm-debug.log*
 # Turborepo
 .turbo
 
+# 本地无 Docker 开发环境（local-dev.cmd）：私有 PostgreSQL 集群、日志、进程号
+.local/
+
 ## Django ##
 venv
 .venv

@@ -293,8 +293,14 @@ function Start-PgCluster([string]$PgBin) {
         Write-Ok "PostgreSQL 已在运行（端口 $PgPort）"
     } else {
         Write-Step "启动 PostgreSQL（端口 $PgPort）"
-        & $pgCtl -D $PgData -o "-p $PgPort" -l $PgLog -w start *> $null
-        if (-not (Wait-Port -Port $PgPort -TimeoutSeconds 30)) {
+        # 用 Start-Process 而不是 `& pg_ctl ... *> $null`：postgres 后台进程会继承
+        # pg_ctl 的输出管道，管道不关闭会把 PowerShell 卡住。也不能加 -Wait：它会
+        # 连 postgres 子进程一起等，脚本同样会挂住。所以只轮询端口。
+        $startArgs = '-D "{0}" -o "-p {1}" -l "{2}" -w start' -f $PgData, $PgPort, $PgLog
+        $null = Start-Process -FilePath $pgCtl -ArgumentList $startArgs -NoNewWindow -PassThru `
+            -RedirectStandardOutput (Join-Path $LogDir "pg-start.log") `
+            -RedirectStandardError (Join-Path $LogDir "pg-start.err.log")
+        if (-not (Wait-Port -Port $PgPort -TimeoutSeconds 45)) {
             Stop-With "PostgreSQL 启动失败，详见 $PgLog"
         }
         Write-Ok "PostgreSQL 已启动"
@@ -431,8 +437,10 @@ if (-not $SkipApi) {
     $redisExe = Find-Tool "redis-server.exe"
     if ($redisExe -and -not (Test-Port -Port $RedisPort)) {
         Write-Step "启动 Redis（端口 $RedisPort）"
+        $redisDataDir = Join-Path $LocalDir "redis-data"
+        New-Item -ItemType Directory -Force -Path $redisDataDir | Out-Null
         Start-Background -Name "redis" -FilePath $redisExe `
-            -Arguments @("--port", "$RedisPort", "--dir", (Join-Path $LocalDir "redis-data")) `
+            -Arguments @("--port", "$RedisPort", "--dir", $redisDataDir) `
             -WorkingDirectory $LocalDir | Out-Null
         $useRedis = Wait-Port -Port $RedisPort -TimeoutSeconds 10
         if ($useRedis) { Write-Ok "Redis 已启动" } else { Write-Warn "Redis 启动失败，改用进程内缓存" }
@@ -581,7 +589,7 @@ if (-not $SkipFrontend) {
         foreach ($app in $Apps) {
             if (-not $AppPorts.ContainsKey($app)) { continue }
             $port = $AppPorts[$app]
-            if (Wait-Port -Port $port -TimeoutSeconds 120) {
+            if (Wait-Port -Port $port -TimeoutSeconds 300) {
                 Write-Ok "$app 就绪：http://localhost:$port"
             } else {
                 Write-Warn "$app 未在 120s 内就绪，详见 $(Join-Path $LogDir 'frontend.log')"

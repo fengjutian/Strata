@@ -90,7 +90,7 @@ pnpm dev
 | Web 应用        | <http://localhost:3000> |
 | 管理后台        | <http://localhost:3001> |
 | Space（分享页） | <http://localhost:3002> |
-| Django API      | <http://localhost:8000> |
+| Django API      | <http://localhost:8010> |
 | MinIO 控制台    | <http://localhost:9090> |
 
 > Windows 上请在 Git Bash 中执行 `setup.sh`，或直接使用下一节的原生脚本。
@@ -119,11 +119,13 @@ pnpm dev
 .\local-dev.ps1 -SkipFrontend                 # 只启动数据库和 API
 .\local-dev.ps1 -Apps web,admin,space,live    # 指定前端应用（live 需要 Redis）
 .\local-dev.ps1 -DatabaseUrl "postgresql://strata:strata@127.0.0.1:5432/strata"
+.\local-dev.ps1 -ApiPort 8010                          # 指定 API 端口（默认 8010）
 ```
 
 说明：
 
 - 日志在 `.local/logs/`，进程号在 `.local/pids/`，本地数据在 `.local/pgdata/`。
+- `-ApiPort` 指定的端口会自动同步到各前端应用的 `.env`（`VITE_API_BASE_URL` / `API_BASE_URL`），前端无需手工修改；改动后需重启前端开发服务生效。
 - Redis、MinIO 可选：检测到 `redis-server` / `minio` 时自动启动，否则缓存退化为进程内存，附件上传不可用。
 - 该模式不使用 RabbitMQ，Celery 使用内存 broker，因此后台任务不会真正执行。需要完整的异步任务时请使用 Docker 方式。
 

@@ -622,9 +622,30 @@ $settings = [ordered]@{
     CORS_ALLOWED_ORIGINS   = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3100"
 }
 foreach ($key in $settings.Keys) {
-    Set-EnvValue -Path $ApiEnv -Key $key -Value $settings[$key]
+    $null = Set-EnvValue -Path $ApiEnv -Key $key -Value $settings[$key]
 }
 Write-Ok "已写入 $($settings.Count) 个变量"
+
+# 4b. 把 API 端口同步到各前端应用的 .env
+# 前端从 .env 里读 VITE_API_BASE_URL 决定打哪个后端，而 .env 是从 .env.example
+# 复制来的（写死了 8000）。只改 -ApiPort 不同步这里，前端就会连到错误的端口。
+$apiBaseUrl = "http://localhost:$ApiPort"
+$frontendEnvTargets = @(
+    @{ Path = (Join-Path $Root "apps\web\.env");   Key = "VITE_API_BASE_URL" },
+    @{ Path = (Join-Path $Root "apps\admin\.env"); Key = "VITE_API_BASE_URL" },
+    @{ Path = (Join-Path $Root "apps\space\.env"); Key = "VITE_API_BASE_URL" },
+    @{ Path = (Join-Path $Root "apps\live\.env");  Key = "API_BASE_URL" }
+)
+$synced = 0
+foreach ($target in $frontendEnvTargets) {
+    if (-not (Test-Path $target.Path)) { continue }
+    if (Set-EnvValue -Path $target.Path -Key $target.Key -Value $apiBaseUrl) { $synced++ }
+}
+if ($synced -gt 0) {
+    Write-Ok "已同步 $synced 个前端 .env 的 API 地址为 $apiBaseUrl"
+} else {
+    Write-Ok "前端 .env 的 API 地址已是 $apiBaseUrl"
+}
 
 # 5. 后端依赖 + 迁移 + 初始化
 if (-not $SkipApi) {

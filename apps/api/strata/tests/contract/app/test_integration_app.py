@@ -7,42 +7,8 @@ from uuid import uuid4
 from django.urls import reverse
 from rest_framework import status
 
-from strata.db.models import Integration, WorkspaceIntegration
+from strata.db.models import WorkspaceIntegration
 from strata.db.models.api import APIToken
-
-
-@pytest.fixture
-def integration_catalogue(db):
-    """Seed the provider catalogue the settings page renders from."""
-    github = Integration.objects.create(
-        provider="github",
-        title="GitHub",
-        network=2,
-        author="GitHub",
-        verified=True,
-        description={"description": "Sync work items with GitHub repositories."},
-    )
-    slack = Integration.objects.create(
-        provider="slack",
-        title="Slack",
-        network=2,
-        author="Slack",
-        verified=True,
-        description={"description": "Send work item updates to a Slack channel."},
-    )
-    return {"github": github, "slack": slack}
-
-
-@pytest.fixture
-def workspace_integration(db, workspace, create_user, integration_catalogue):
-    """Install the GitHub provider into the test workspace."""
-    token = APIToken.objects.create(label="Integration token", user=create_user, user_type=1)
-    return WorkspaceIntegration.objects.create(
-        workspace=workspace,
-        actor=create_user,
-        integration=integration_catalogue["github"],
-        api_token=token,
-    )
 
 
 @pytest.mark.contract

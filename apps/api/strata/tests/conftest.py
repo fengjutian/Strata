@@ -6,7 +6,7 @@ import pytest
 from rest_framework.test import APIClient
 from pytest_django.fixtures import django_db_setup
 
-from strata.db.models import User, Workspace, WorkspaceMember
+from strata.db.models import User, Workspace, WorkspaceIntegration, WorkspaceMember
 from strata.db.models.api import APIToken
 
 
@@ -138,3 +138,43 @@ def workspace(create_user):
     WorkspaceMember.objects.create(workspace=created_workspace, member=create_user, role=20)
 
     return created_workspace
+
+
+@pytest.fixture
+def integration_catalogue(db):
+    """Seed the provider catalogue the integrations settings page renders from.
+
+    The rows mirror what the ``0127_seed_integrations`` migration creates, so
+    tests exercise the same shape a real instance has.
+    """
+    from strata.db.models import Integration
+
+    github = Integration.objects.create(
+        provider="github",
+        title="GitHub",
+        network=2,
+        author="GitHub",
+        verified=True,
+        description={"description": "Sync work items with GitHub repositories."},
+    )
+    slack = Integration.objects.create(
+        provider="slack",
+        title="Slack",
+        network=2,
+        author="Slack",
+        verified=True,
+        description={"description": "Send work item updates to a Slack channel."},
+    )
+    return {"github": github, "slack": slack}
+
+
+@pytest.fixture
+def workspace_integration(db, workspace, create_user, integration_catalogue):
+    """Install the GitHub provider into the test workspace."""
+    token = APIToken.objects.create(label="Integration token", user=create_user, user_type=1)
+    return WorkspaceIntegration.objects.create(
+        workspace=workspace,
+        actor=create_user,
+        integration=integration_catalogue["github"],
+        api_token=token,
+    )

@@ -8,7 +8,7 @@
       1. 生成 .env（根目录与 apps/*），补齐 SECRET_KEY、数据库、对象存储配置；
       2. 用本机 PostgreSQL 二进制在 .local/pgdata 起一个私有集群（默认端口 55432），
          不碰你已有的 PostgreSQL 服务，也不需要它的密码；
-      3. uv sync + migrate + 实例初始化，后台启动 Django（localhost:8000）；
+      3. uv sync + migrate + 实例初始化，后台启动 Django（localhost:8010）；
       4. 后台启动前端（web:3000、admin:3001、space:3002）。
 
     Redis / MinIO 是可选的：本机有 redis-server.exe 或 minio.exe（在 PATH 或
@@ -47,7 +47,8 @@
     首次 uv sync 走清华 PyPI 镜像，国内网络下通常快很多。
 
 .PARAMETER ApiPort
-    Django 监听端口，默认 8000。
+    Django 监听端口，默认 8010。脚本会把这个端口同步写进各前端应用的 .env
+    （VITE_API_BASE_URL / API_BASE_URL），前端不需要手工改。
 
 .EXAMPLE
     .\local-dev.ps1
@@ -72,7 +73,7 @@ param(
     [string[]]$Apps = @("web", "admin", "space"),
     [string]$DatabaseUrl = $env:STRATA_DATABASE_URL,
     [int]$PgPort = 55432,
-    [int]$ApiPort = 8000
+    [int]$ApiPort = 8010
 )
 
 Set-StrictMode -Version Latest
@@ -161,9 +162,12 @@ function Set-EnvValue([string]$Path, [string]$Key, [string]$Value) {
     if (Test-Path $Path) { $lines = @(Get-Content -Path $Path -Encoding utf8) }
     $pattern = "^\s*" + [regex]::Escape($Key) + "\s*="
     $written = $false
+    $changed = $false
     $result = foreach ($line in $lines) {
         if ($line -match $pattern) {
             if (-not $written) {
+                $existing = ($line -split "=", 2)[1].Trim().Trim('"')
+                if ($existing -ne $Value) { $changed = $true }
                 "$Key=`"$Value`""
                 $written = $true
             }
@@ -172,8 +176,12 @@ function Set-EnvValue([string]$Path, [string]$Key, [string]$Value) {
         $line
     }
     $result = @($result)
-    if (-not $written) { $result += "$Key=`"$Value`"" }
+    if (-not $written) {
+        $result += "$Key=`"$Value`""
+        $changed = $true
+    }
     Save-Utf8NoBom -Path $Path -Lines $result
+    return $changed
 }
 
 function Save-Utf8NoBom([string]$Path, [string[]]$Lines) {

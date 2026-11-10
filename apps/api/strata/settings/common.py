@@ -325,11 +325,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Storage Settings
+FILE_STORAGE_BACKEND = os.environ.get("FILE_STORAGE_BACKEND", "s3").lower()
+SIGNED_URL_EXPIRATION = int(os.environ.get("SIGNED_URL_EXPIRATION", "3600"))
 # Use Minio settings
 USE_MINIO = int(os.environ.get("USE_MINIO", 0)) == 1
 
 STORAGES = {"staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}
-STORAGES["default"] = {"BACKEND": "strata.settings.storage.S3Storage"}
+STORAGES["default"] = {
+    "BACKEND": (
+        "django.core.files.storage.FileSystemStorage"
+        if FILE_STORAGE_BACKEND == "local"
+        else "strata.settings.storage.S3Storage"
+    )
+}
 # No fallback: when unset, boto3 resolves credentials through its default chain, as S3Storage does.
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")

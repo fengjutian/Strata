@@ -6,6 +6,8 @@ from django.urls import path
 
 
 from strata.app.views import (
+    LocalAssetDownloadEndpoint,
+    LocalAssetUploadEndpoint,
     FileAssetEndpoint,
     UserAssetsEndpoint,
     FileAssetViewSet,
@@ -24,6 +26,8 @@ from strata.app.views import (
 
 
 urlpatterns = [
+    path("assets/v2/local-upload/", LocalAssetUploadEndpoint.as_view(), name="local-asset-upload"),
+    path("assets/v2/local-files/", LocalAssetDownloadEndpoint.as_view(), name="local-asset-download"),
     path(
         "workspaces/<str:slug>/file-assets/",
         FileAssetEndpoint.as_view(),

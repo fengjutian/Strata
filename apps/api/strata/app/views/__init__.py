@@ -104,6 +104,8 @@ from .cycle.archive import CycleArchiveUnarchiveEndpoint
 
 from .asset.base import FileAssetEndpoint, UserAssetsEndpoint, FileAssetViewSet
 from .asset.v2 import (
+    LocalAssetDownloadEndpoint,
+    LocalAssetUploadEndpoint,
     WorkspaceFileAssetEndpoint,
     UserAssetsV2Endpoint,
     StaticFileAssetEndpoint,

@@ -7,7 +7,8 @@ import uuid
 
 # Django imports
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.core import signing
+from django.http import FileResponse, Http404, HttpResponseRedirect
 from django.utils import timezone
 from django.db import IntegrityError
 from django.db.models import Q
@@ -26,6 +27,66 @@ from strata.utils.cache import invalidate_cache_directly
 from strata.utils.path_validator import sanitize_filename
 from strata.bgtasks.storage_metadata_task import get_asset_object_metadata
 from strata.throttles.asset import AssetRateThrottle
+
+
+class LocalAssetUploadEndpoint(BaseAPIView):
+    """Receive a file using a short-lived signed upload token when local storage is enabled."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if settings.FILE_STORAGE_BACKEND != "local":
+            raise Http404
+        try:
+            payload = signing.loads(
+                request.query_params.get("token", ""),
+                salt="local-asset-upload",
+                max_age=settings.SIGNED_URL_EXPIRATION,
+            )
+        except signing.BadSignature:
+            return Response({"error": "Invalid or expired upload URL."}, status=status.HTTP_403_FORBIDDEN)
+
+        uploaded_file = request.FILES.get("file")
+        if uploaded_file is None:
+            return Response({"error": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded_file.size < 1 or uploaded_file.size > payload["max_size"]:
+            return Response({"error": "Invalid file size."}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded_file.content_type != payload["content_type"]:
+            return Response({"error": "Invalid file type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        storage = S3Storage(request=request)
+        if not storage.upload_file(uploaded_file, payload["key"], uploaded_file.content_type):
+            return Response({"error": "Could not store the file."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LocalAssetDownloadEndpoint(BaseAPIView):
+    """Stream a local file using the same expiring-link semantics as S3 URLs."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if settings.FILE_STORAGE_BACKEND != "local":
+            raise Http404
+        try:
+            payload = signing.loads(
+                request.query_params.get("token", ""),
+                salt="local-asset-download",
+                max_age=settings.SIGNED_URL_EXPIRATION,
+            )
+        except signing.BadSignature:
+            return Response({"error": "Invalid or expired download URL."}, status=status.HTTP_403_FORBIDDEN)
+
+        storage = S3Storage(request=request).local_storage
+        if not storage.exists(payload["key"]):
+            raise Http404
+        response = FileResponse(
+            storage.open(payload["key"], "rb"),
+            content_type=payload.get("content_type") or "application/octet-stream",
+            as_attachment=payload.get("disposition") != "inline",
+            filename=payload.get("filename"),
+        )
+        return response
 
 
 def can_modify_asset(user, asset):

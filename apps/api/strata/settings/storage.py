@@ -4,10 +4,13 @@
 
 # Python imports
 import os
+import shutil
 import uuid
 
 # Django imports
 from django.conf import settings
+from django.core import signing
+from django.core.files.storage import FileSystemStorage
 
 # Third party imports
 import boto3
@@ -26,6 +29,14 @@ class S3Storage(S3Boto3Storage):
     """S3 storage class to generate presigned URLs for S3 objects"""
 
     def __init__(self, request=None):
+        self.request = request
+        self.use_local_storage = settings.FILE_STORAGE_BACKEND == "local"
+        self.local_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+        self.signed_url_expiration = int(
+            os.environ.get("SIGNED_URL_EXPIRATION", str(settings.SIGNED_URL_EXPIRATION))
+        )
+        if self.use_local_storage:
+            return
         # Get the AWS credentials and bucket name from the environment
         self.aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
         # Use the AWS_SECRET_ACCESS_KEY environment variable for the secret key
@@ -36,9 +47,6 @@ class S3Storage(S3Boto3Storage):
         self.aws_region = os.environ.get("AWS_REGION")
         # Use the AWS_S3_ENDPOINT_URL environment variable for the endpoint URL
         self.aws_s3_endpoint_url = os.environ.get("AWS_S3_ENDPOINT_URL") or os.environ.get("MINIO_ENDPOINT_URL")
-        # Use the SIGNED_URL_EXPIRATION environment variable for the expiration time (default: 3600 seconds)
-        self.signed_url_expiration = int(os.environ.get("SIGNED_URL_EXPIRATION", "3600"))
-
         if os.environ.get("USE_MINIO") == "1":
             # Determine protocol based on environment variable
             if os.environ.get("MINIO_ENDPOINT_SSL") == "1":
@@ -69,6 +77,12 @@ class S3Storage(S3Boto3Storage):
         """Generate a presigned URL to upload an S3 object"""
         if expiration is None:
             expiration = self.signed_url_expiration
+        if self.use_local_storage:
+            token = signing.dumps(
+                {"key": object_name, "content_type": file_type, "max_size": file_size},
+                salt="local-asset-upload",
+            )
+            return {"url": f"/api/assets/v2/local-upload/?token={quote(token)}", "fields": {}}
         fields = {"Content-Type": file_type}
 
         conditions = [
@@ -128,7 +142,18 @@ class S3Storage(S3Boto3Storage):
         is served as an attachment.
         """
         if expiration is None:
-            expiration = self.signed_url_expiration
+            expiration = getattr(self, "signed_url_expiration", 3600)
+        if self.use_local_storage:
+            token = signing.dumps(
+                {
+                    "key": str(object_name),
+                    "disposition": disposition,
+                    "filename": filename,
+                    "content_type": content_type,
+                },
+                salt="local-asset-download",
+            )
+            return f"/api/assets/v2/local-files/?token={quote(token)}"
         params = {"Bucket": self.aws_storage_bucket_name, "Key": str(object_name)}
         content_type = content_type.split(";")[0].strip().lower() if isinstance(content_type, str) else ""
         if disposition == "inline" and content_type in settings.INLINE_SAFE_MIME_TYPES:
@@ -152,6 +177,18 @@ class S3Storage(S3Boto3Storage):
 
     def get_object_metadata(self, object_name):
         """Get the metadata for an S3 object"""
+        if self.use_local_storage:
+            if not self.local_storage.exists(object_name):
+                return None
+            path = self.local_storage.path(object_name)
+            stat = os.stat(path)
+            return {
+                "ContentType": None,
+                "ContentLength": stat.st_size,
+                "LastModified": None,
+                "ETag": None,
+                "Metadata": {},
+            }
         try:
             response = self.s3_client.head_object(Bucket=self.aws_storage_bucket_name, Key=object_name)
         except ClientError as e:
@@ -170,6 +207,14 @@ class S3Storage(S3Boto3Storage):
 
     def copy_object(self, object_name, new_object_name):
         """Copy an S3 object to a new location"""
+        if self.use_local_storage:
+            if not self.local_storage.exists(object_name):
+                return None
+            source = self.local_storage.path(object_name)
+            destination = self.local_storage.path(new_object_name)
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            shutil.copy2(source, destination)
+            return {"local": True}
         try:
             response = self.s3_client.copy_object(
                 Bucket=self.aws_storage_bucket_name,
@@ -190,6 +235,11 @@ class S3Storage(S3Boto3Storage):
         extra_args: dict = {},
     ) -> bool:
         """Upload a file directly to S3"""
+        if self.use_local_storage:
+            if self.local_storage.exists(object_name):
+                self.local_storage.delete(object_name)
+            self.local_storage.save(object_name, file_obj)
+            return True
         try:
             if content_type:
                 extra_args["ContentType"] = content_type
@@ -207,6 +257,10 @@ class S3Storage(S3Boto3Storage):
 
     def delete_files(self, object_names):
         """Delete an S3 object"""
+        if self.use_local_storage:
+            for object_name in object_names:
+                self.local_storage.delete(object_name)
+            return True
         try:
             self.s3_client.delete_objects(
                 Bucket=self.aws_storage_bucket_name,

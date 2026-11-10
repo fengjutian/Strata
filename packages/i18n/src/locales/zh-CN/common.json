@@ -64,6 +64,18 @@
   "notifications": "通知",
   "workspaces": "工作区",
   "create_workspace": "创建工作区",
+  "workspace_access": {
+    "not_found": {
+      "title": "未找到工作区",
+      "description": "未找到该网址对应的工作区。该工作区可能不存在，或您没有查看权限。"
+    },
+    "not_authorized": {
+      "title": "无权访问",
+      "description": "您还不是此工作区的成员。请联系工作区管理员获取邀请，或查看待处理的邀请。"
+    },
+    "check_pending_invites": "查看待处理邀请",
+    "visit_profile": "查看个人资料"
+  },
   "invitations": "邀请",
   "summary": "摘要",
   "assigned": "已分配",

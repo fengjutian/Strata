@@ -64,6 +64,18 @@
   "notifications": "Notifications",
   "workspaces": "Workspaces",
   "create_workspace": "Create workspace",
+  "workspace_access": {
+    "not_found": {
+      "title": "Workspace not found",
+      "description": "No workspace found with the URL. It may not exist or you lack authorization to view it."
+    },
+    "not_authorized": {
+      "title": "Not authorized!",
+      "description": "You're not a member of this workspace. Please contact the workspace admin to get an invitation or check your pending invitations."
+    },
+    "check_pending_invites": "Check pending invites",
+    "visit_profile": "Visit profile"
+  },
   "invitations": "Invitations",
   "summary": "Summary",
   "assigned": "Assigned",

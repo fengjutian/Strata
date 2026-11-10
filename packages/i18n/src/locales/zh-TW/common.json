@@ -64,6 +64,18 @@
   "notifications": "通知",
   "workspaces": "工作區",
   "create_workspace": "建立工作區",
+  "workspace_access": {
+    "not_found": {
+      "title": "找不到工作區",
+      "description": "找不到該網址所對應的工作區。該工作區可能不存在，或您沒有檢視權限。"
+    },
+    "not_authorized": {
+      "title": "無權存取",
+      "description": "您還不是此工作區的成員。請聯絡工作區管理員取得邀請，或查看待處理的邀請。"
+    },
+    "check_pending_invites": "查看待處理邀請",
+    "visit_profile": "查看個人資料"
+  },
   "invitations": "邀請",
   "summary": "摘要",
   "assigned": "已指派",

@@ -12,6 +12,7 @@ import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makestrata/propel/icons";
 import { EUserPermissions, EUserPermissionsLevel } from "@strata/constants";
+import { useTranslation } from "@strata/i18n";
 import { Button } from "@makestrata/propel/components/button";
 import { EmptyStateDetailed } from "@strata/blocks/empty-state";
 import { StrataLogo } from "@strata/blocks/icons";
@@ -46,6 +47,7 @@ interface IWorkspaceAuthWrapper {
 
 export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props: IWorkspaceAuthWrapper) {
   const { children, isLoading: isParentLoading = false } = props;
+  const { t } = useTranslation();
   // router params
   const { workspaceSlug } = useParams();
   // store hooks
@@ -129,8 +131,8 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
     await signOut().catch(() =>
       setToast({
         type: "error",
-        title: "Error!",
-        message: "Failed to sign out. Please try again.",
+        title: t("auth.sign_out.toast.error.title"),
+        message: t("auth.sign_out.toast.error.message"),
       })
     );
   };
@@ -157,10 +159,10 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
             </div>
             <div className="relative flex items-center gap-2">
               <div className="text-body-xs-medium">{currentUser?.email}</div>
-              <Tooltip label="Sign out" alignOffset={8} disabled={isMobile}>
+              <Tooltip label={t("sign_out")} alignOffset={8} disabled={isMobile}>
                 <button
                   type="button"
-                  aria-label="Sign out"
+                  aria-label={t("sign_out")}
                   className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm hover:bg-layer-1"
                   onClick={() => void handleSignOut()}
                 >
@@ -174,8 +176,8 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
               align="center"
               assetKey="invalid-link"
               assetClassName="size-40"
-              title="Workspace not found"
-              description="No workspace found with the URL. It may not exist or you lack authorization to view it."
+              title={t("workspace_access.not_found.title")}
+              description={t("workspace_access.not_found.description")}
               customButton={
                 <div className="flex flex-col gap-4 sm:flex-row">
                   {allWorkspaces.length > 0 ? (
@@ -184,7 +186,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                         variant="primary"
                         size="lg"
                         stretch="auto"
-                        label="Go Home"
+                        label={t("go_home")}
                         nativeButton={false}
                         render={<Link href="/" />}
                       />
@@ -192,7 +194,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                         variant="secondary"
                         size="lg"
                         stretch="auto"
-                        label="Visit Profile"
+                        label={t("workspace_access.visit_profile")}
                         nativeButton={false}
                         render={<Link href="/settings/profile/general/" />}
                       />
@@ -202,7 +204,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                       variant="secondary"
                       size="lg"
                       stretch="auto"
-                      label="Create new workspace"
+                      label={t("create_workspace")}
                       nativeButton={false}
                       render={<Link href="/create-workspace/" />}
                     />
@@ -225,10 +227,9 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
         <div className="grid h-full place-items-center p-4">
           <div className="space-y-8 text-center">
             <div className="space-y-2">
-              <h3 className="text-h6-semibold">Not Authorized!</h3>
+              <h3 className="text-h6-semibold">{t("workspace_access.not_authorized.title")}</h3>
               <p className="mx-auto w-1/2 text-body-xs-regular text-secondary">
-                You{"'"}re not a member of this workspace. Please contact the workspace admin to get an invitation or
-                check your pending invitations.
+                {t("workspace_access.not_authorized.description")}
               </p>
             </div>
             <div className="flex items-center justify-center gap-2">
@@ -236,7 +237,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                 variant="secondary"
                 size="sm"
                 stretch="auto"
-                label="Check pending invites"
+                label={t("workspace_access.check_pending_invites")}
                 nativeButton={false}
                 render={<Link href="/invitations" />}
               />
@@ -244,7 +245,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                 variant="primary"
                 size="sm"
                 stretch="auto"
-                label="Create new workspace"
+                label={t("create_workspace")}
                 nativeButton={false}
                 render={<Link href="/create-workspace" />}
               />

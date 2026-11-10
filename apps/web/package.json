@@ -18,6 +18,8 @@
     "fix:format": "oxfmt ."
   },
   "dependencies": {
+    "@dicebear/core": "catalog:",
+    "@dicebear/styles": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "catalog:",
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "catalog:",

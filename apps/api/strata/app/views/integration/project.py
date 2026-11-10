@@ -18,6 +18,47 @@ from strata.db.models import (
 )
 
 
+class WorkspaceIntegrationGithubRepositoriesEndpoint(BaseAPIView):
+    """List the GitHub repositories available to a workspace integration.
+
+    The client uses this to populate the repository picker before a
+    repository is bound to a project. The rows come from the integration's
+    own metadata (``GithubRepository`` rows recorded when the integration was
+    installed), so no call is made out to GitHub here.
+    """
+
+    @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
+    def get(self, request, slug, integration_id):
+        workspace_integration = WorkspaceIntegration.objects.filter(
+            id=integration_id,
+            workspace__slug=slug,
+        ).first()
+
+        if workspace_integration is None:
+            return Response(
+                {"error": "The requested integration does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        repositories = GithubRepository.objects.filter(
+            project__workspace__slug=slug,
+        ).distinct()
+
+        return Response(
+            [
+                {
+                    "id": str(repository.id),
+                    "name": repository.name,
+                    "owner": repository.owner,
+                    "url": repository.url,
+                    "repository_id": str(repository.repository_id),
+                }
+                for repository in repositories
+            ],
+            status=status.HTTP_200_OK,
+        )
+
+
 class GithubRepositorySyncEndpoint(BaseAPIView):
     """Bind a GitHub repository to a project through a workspace's GitHub integration.
 

@@ -9,6 +9,7 @@ from strata.app.views import (
     IntegrationEndpoint,
     ProjectSlackSyncEndpoint,
     WorkspaceIntegrationEndpoint,
+    WorkspaceIntegrationGithubRepositoriesEndpoint,
     WorkspaceIntegrationProviderEndpoint,
 )
 
@@ -29,6 +30,13 @@ urlpatterns = [
         WorkspaceIntegrationProviderEndpoint.as_view(),
         name="workspace-integration-provider",
     ),
+    # No trailing slash: the web client calls this path without one
+    # (services/integrations/github.service.ts).
+    path(
+        "workspaces/<str:slug>/workspace-integrations/<uuid:integration_id>/github-repositories",
+        WorkspaceIntegrationGithubRepositoriesEndpoint.as_view(),
+        name="workspace-integration-github-repositories",
+    ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/workspace-integrations/"
         "<uuid:integration_id>/github-repository-sync/",
@@ -43,7 +51,7 @@ urlpatterns = [
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/workspace-integrations/"
-        "<uuid:integration_id>/project-slack-sync/<uuid:slack_sync_id>/",
+        "<uuid:integration_id>/project-slack-sync/<uuid:slack_sync_id>",
         ProjectSlackSyncEndpoint.as_view(),
         name="project-slack-sync",
     ),

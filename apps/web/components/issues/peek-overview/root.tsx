@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { observer } from "mobx-react";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 // Strata imports
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@strata/constants";
@@ -22,6 +22,12 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useWorkItemProperties } from "@/hooks/use-issue-properties";
 // local imports
 import type { TIssueOperations } from "../issue-detail";
+import {
+  arePeekSearchParamsEqual,
+  getPeekIssueFromSearchParams,
+  getPeekIssueKey,
+  updatePeekSearchParams,
+} from "./url-state";
 import { IssueView } from "./view";
 
 export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWorkItemPeekOverview) {
@@ -34,6 +40,12 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   const { t } = useTranslation();
   // router
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { workspaceSlug: routeWorkspaceSlug, projectId: routeProjectId } = useParams();
+  const previousUrlPeekKey = useRef<string | undefined>(undefined);
+  const previousStorePeekKey = useRef<string | undefined>(undefined);
+  const hasInitializedUrlState = useRef(false);
   // store hook
   const { allowPermissions } = useUserPermissions();
 
@@ -57,7 +69,48 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
     storeType === EIssuesStoreType.EPIC ? EIssueServiceType.EPICS : EIssueServiceType.ISSUES
   );
   // state
-  const [error, setError] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (embedIssue) return;
+
+    const currentSearchParams = new URLSearchParams(searchParams.toString());
+    const urlPeekIssue = getPeekIssueFromSearchParams(
+      currentSearchParams,
+      routeWorkspaceSlug?.toString(),
+      routeProjectId?.toString()
+    );
+    const urlPeekKey = getPeekIssueKey(urlPeekIssue);
+    const storePeekKey = getPeekIssueKey(peekIssue);
+
+    if (!hasInitializedUrlState.current) {
+      hasInitializedUrlState.current = true;
+      previousUrlPeekKey.current = urlPeekKey;
+      previousStorePeekKey.current = storePeekKey;
+      if (!peekIssue && urlPeekIssue) {
+        setPeekIssue(urlPeekIssue);
+        return;
+      }
+    }
+
+    const urlStateChanged = urlPeekKey !== previousUrlPeekKey.current;
+    const storeStateChanged = storePeekKey !== previousStorePeekKey.current;
+    previousUrlPeekKey.current = urlPeekKey;
+    previousStorePeekKey.current = storePeekKey;
+
+    if (urlStateChanged && !storeStateChanged && urlPeekKey !== storePeekKey) {
+      setPeekIssue(urlPeekIssue);
+      return;
+    }
+
+    if (arePeekSearchParamsEqual(currentSearchParams, peekIssue)) return;
+
+    const nextSearchParams = updatePeekSearchParams(currentSearchParams, peekIssue);
+    const query = nextSearchParams.toString();
+    const nextUrl = `${pathname}${query ? `?${query}` : ""}`;
+    if (peekIssue) router.push(nextUrl);
+    else router.replace(nextUrl);
+  }, [embedIssue, pathname, peekIssue, routeProjectId, routeWorkspaceSlug, router, searchParams, setPeekIssue]);
 
   const removeRoutePeekId = useCallback(() => {
     setPeekIssue(undefined);
@@ -68,10 +121,10 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
     () => ({
       fetch: async (workspaceSlug: string, projectId: string, issueId: string) => {
         try {
-          setError(false);
+          setHasError(false);
           await fetchIssue(workspaceSlug, projectId, issueId);
         } catch (error) {
-          setError(true);
+          setHasError(true);
           console.error("Error fetching the parent issue", error);
         }
       },
@@ -241,7 +294,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
       projectId={peekIssue.projectId}
       issueId={peekIssue.issueId}
       isLoading={isLoading}
-      isError={error}
+      isError={hasError}
       is_archived={!!peekIssue.isArchived}
       disabled={!isEditable}
       embedIssue={embedIssue}

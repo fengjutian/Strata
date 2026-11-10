@@ -242,6 +242,7 @@ from .integration.base import (
 from .integration.project import (
     GithubRepositorySyncEndpoint,
     ProjectSlackSyncEndpoint,
+    WorkspaceIntegrationGithubRepositoriesEndpoint,
 )
 
 from .error_404 import custom_404_view

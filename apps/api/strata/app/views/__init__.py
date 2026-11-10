@@ -232,6 +232,12 @@ from .webhook.base import (
     WebhookSecretRegenerateEndpoint,
 )
 
+from .integration.base import (
+    IntegrationEndpoint,
+    WorkspaceIntegrationEndpoint,
+    WorkspaceIntegrationProviderEndpoint,
+)
+
 from .error_404 import custom_404_view
 
 from .notification.base import MarkAllReadNotificationViewSet

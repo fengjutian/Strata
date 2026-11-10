@@ -7,6 +7,7 @@
 import { useState } from "react";
 // ui
 import { Button } from "@makestrata/propel/components/button";
+import { useTranslation } from "@strata/i18n";
 import {
   Dialog,
   DialogActions,
@@ -28,6 +29,7 @@ type Props = {
 
 export function ConfirmIssueDiscard(props: Props) {
   const { isOpen, handleClose, onDiscard, onConfirm } = props;
+  const { t } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,25 +58,23 @@ export function ConfirmIssueDiscard(props: Props) {
         <DialogMain>
           <DialogHeader>
             <DialogHeading>
-              <DialogTitle>Save this draft?</DialogTitle>
-              <DialogDescription>
-                You can save this work item to Drafts so you can come back to it later.
-              </DialogDescription>
+              <DialogTitle>{t("save_this_draft")}</DialogTitle>
+              <DialogDescription>{t("save_this_draft_description")}</DialogDescription>
             </DialogHeading>
           </DialogHeader>
         </DialogMain>
         <DialogActions>
           <DialogInfo>
-            <Button variant="secondary" size="sm" stretch="auto" onClick={onDiscard} label="Discard" />
+            <Button variant="secondary" size="sm" stretch="auto" onClick={onDiscard} label={t("discard")} />
           </DialogInfo>
-          <Button variant="secondary" size="sm" stretch="auto" onClick={onClose} label="Cancel" />
+          <Button variant="secondary" size="sm" stretch="auto" onClick={onClose} label={t("cancel")} />
           <Button
             variant="primary"
             size="sm"
             stretch="auto"
             onClick={() => void handleDeletion()}
             loading={isLoading}
-            label={isLoading ? "Saving" : "Save to Drafts"}
+            label={t(isLoading ? "saving" : "save_to_drafts")}
           />
         </DialogActions>
       </DialogContent>

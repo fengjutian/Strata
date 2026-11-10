@@ -285,6 +285,8 @@
   "issue_updated_successfully": "工作项更新成功",
   "issue_could_not_be_updated": "工作项无法更新",
   "create_a_draft": "创建草稿",
+  "save_this_draft": "保存此草稿？",
+  "save_this_draft_description": "您可以将此工作项保存到草稿，方便稍后继续编辑。",
   "save_to_drafts": "保存到草稿",
   "save": "保存",
   "update": "更新",

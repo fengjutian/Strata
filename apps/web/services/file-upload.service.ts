@@ -6,6 +6,7 @@
 
 import type { AxiosRequestConfig } from "axios";
 import axios from "axios";
+import { API_BASE_URL } from "@strata/constants";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -13,7 +14,10 @@ export class FileUploadService extends APIService {
   private cancelSource: any;
 
   constructor() {
-    super("");
+    // Local-storage upload URLs are relative API paths. Using the API base keeps
+    // them on Django in split-port development, while axios still leaves absolute
+    // S3-compatible signed URLs on their original origin.
+    super(API_BASE_URL);
   }
 
   async uploadFile(

@@ -680,13 +680,14 @@ class IssueViewSet(BaseViewSet):
             return Response({"error": "Issue not found"}, status=status.HTTP_404_NOT_FOUND)
 
         current_instance = json.dumps(IssueDetailSerializer(issue).data, cls=DjangoJSONEncoder)
+        previous_state_id = issue.state_id
 
         serializer = IssueCreateSerializer(issue, data=request.data, partial=True, context={"project_id": project_id})
         if serializer.is_valid():
             serializer.save()
             # Read-only fields are ignored on save, so they are not reported as changes either.
             accepted_data = writable_data(serializer, request.data)
-            if "state_id" in accepted_data and str(accepted_data["state_id"]) != str(issue.state_id):
+            if "state_id" in accepted_data and str(accepted_data["state_id"]) != str(previous_state_id):
                 run_issue_automations(
                     issue_id=issue.id, trigger="issue_state_changed", actor_id=request.user.id
                 )

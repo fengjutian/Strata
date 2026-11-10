@@ -239,6 +239,11 @@ from .integration.base import (
     WorkspaceIntegrationProviderEndpoint,
 )
 
+from .integration.project import (
+    GithubRepositorySyncEndpoint,
+    ProjectSlackSyncEndpoint,
+)
+
 from .error_404 import custom_404_view
 
 from .notification.base import MarkAllReadNotificationViewSet

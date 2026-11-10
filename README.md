@@ -108,6 +108,7 @@ pnpm dev
 ```powershell
 # 启动（数据库 + API + web/admin/space）
 .\local-dev.ps1
+.\local-dev.ps1 -Detach                     # 后台启动并立即返回，不进入交互日志监控
 
 # 查看状态、停止全部进程
 .\local-dev.ps1 -Status
@@ -297,6 +298,7 @@ Ports: web `3000`, admin `3001`, space `3002`, API `8000`, MinIO console `9090`.
 
 ```powershell
 .\local-dev.ps1                  # database + API + web/admin/space
+.\local-dev.ps1 -Detach          # start in the background without interactive log monitoring
 .\local-dev.ps1 -Status          # show status
 .\local-dev.ps1 -Stop            # stop everything
 .\local-dev.ps1 -ResetDb         # recreate the local database

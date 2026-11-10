@@ -50,6 +50,9 @@
     Django 监听端口，默认 8010。脚本会把这个端口同步写进各前端应用的 .env
     （VITE_API_BASE_URL / API_BASE_URL），前端不需要手工改。
 
+.PARAMETER Detach
+    启动成功后直接返回，不进入交互监控。默认会持续显示 API/前端日志，并提供快捷键操作。
+
 .EXAMPLE
     .\local-dev.ps1
     启动全部（数据库 + API + 前端）。
@@ -70,6 +73,7 @@ param(
     [switch]$Mirror,
     [switch]$SkipApi,
     [switch]$SkipFrontend,
+    [switch]$Detach,
     [string[]]$Apps = @("web", "admin", "space"),
     [string]$DatabaseUrl = $env:STRATA_DATABASE_URL,
     [int]$PgPort = 55432,
@@ -490,6 +494,84 @@ function Invoke-StopAll {
     Write-Host ""
 }
 
+function Start-InteractiveMonitor {
+    $streams = @()
+    foreach ($entry in @(
+            @{ Name = "API"; Path = (Join-Path $LogDir "api.log"); Color = "Gray" },
+            @{ Name = "API 错误"; Path = (Join-Path $LogDir "api.err.log"); Color = "Red" },
+            @{ Name = "前端"; Path = (Join-Path $LogDir "frontend.log"); Color = "Gray" },
+            @{ Name = "前端错误"; Path = (Join-Path $LogDir "frontend.err.log"); Color = "Red" }
+        )) {
+        if (-not (Test-Path $entry.Path)) { New-Item -ItemType File -Path $entry.Path -Force | Out-Null }
+        $fileStream = [IO.File]::Open($entry.Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+        $null = $fileStream.Seek(0, [IO.SeekOrigin]::End)
+        $streams += @{
+            Name = $entry.Name
+            Color = $entry.Color
+            Stream = $fileStream
+            Reader = New-Object IO.StreamReader($fileStream, [Text.Encoding]::UTF8)
+        }
+    }
+
+    Write-Host ""
+    Write-Host "开发环境正在运行，下面会实时显示新增日志。" -ForegroundColor Green
+    Write-Host "  [O] 打开主应用  [S] 查看状态  [L] 打开日志目录  [Q] 退出监控（服务继续）  [X] 停止全部服务" -ForegroundColor Cyan
+    Write-Host "------------------------------------------------------------" -ForegroundColor DarkGray
+
+    $lastApiState = [bool](Get-RunningPid "api")
+    $lastFrontendState = [bool](Get-RunningPid "frontend")
+    $nextHealthCheck = (Get-Date).AddSeconds(5)
+
+    try {
+        while ($true) {
+            foreach ($stream in $streams) {
+                while ($stream.Reader.Peek() -ge 0) {
+                    $line = $stream.Reader.ReadLine()
+                    if ($null -ne $line) { Write-Host "[$($stream.Name)] $line" -ForegroundColor $stream.Color }
+                }
+            }
+
+            if ((Get-Date) -ge $nextHealthCheck) {
+                $apiState = [bool](Get-RunningPid "api")
+                $frontendState = [bool](Get-RunningPid "frontend")
+                if ($apiState -ne $lastApiState) {
+                    if ($apiState) { Write-Ok "Django API 已恢复运行" } else { Write-Bad "Django API 已退出，请查看 api.err.log" }
+                    $lastApiState = $apiState
+                }
+                if ($frontendState -ne $lastFrontendState) {
+                    if ($frontendState) { Write-Ok "前端已恢复运行" } else { Write-Bad "前端已退出，请查看 frontend.err.log" }
+                    $lastFrontendState = $frontendState
+                }
+                $nextHealthCheck = (Get-Date).AddSeconds(5)
+            }
+
+            if ([Console]::KeyAvailable) {
+                $key = [Console]::ReadKey($true).Key
+                switch ($key) {
+                    "O" { Start-Process "http://localhost:3000" }
+                    "S" { Show-Status }
+                    "L" { Start-Process "explorer.exe" -ArgumentList $LogDir }
+                    "Q" {
+                        Write-Host "`n已退出监控，开发服务仍在后台运行。使用 .\local-dev.ps1 -Stop 停止。" -ForegroundColor Yellow
+                        return
+                    }
+                    "X" {
+                        Write-Host ""
+                        Invoke-StopAll
+                        return
+                    }
+                }
+            }
+            Start-Sleep -Milliseconds 200
+        }
+    } finally {
+        foreach ($stream in $streams) {
+            $stream.Reader.Dispose()
+            $stream.Stream.Dispose()
+        }
+    }
+}
+
 # ---------------------------------------------------------------- 主流程
 
 New-Item -ItemType Directory -Force -Path $LocalDir, $LogDir, $PidDir, $BinDir | Out-Null
@@ -775,3 +857,12 @@ if (-not $SkipFrontend -and -not $SkipApi) {
     Write-Host "打开 http://localhost:3001/god-mode/ 注册管理员（结尾的 / 不能省），再用同一账号登录 http://localhost:3000" -ForegroundColor Green
 }
 Write-Host ""
+
+if (-not $Detach) {
+    try {
+        Start-InteractiveMonitor
+    } catch {
+        Write-Warn "当前终端不支持交互监控：$($_.Exception.Message)"
+        Write-Host "服务已在后台运行；可用 .\local-dev.ps1 -Status 查看状态。"
+    }
+}

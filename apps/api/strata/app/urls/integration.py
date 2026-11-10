@@ -5,7 +5,9 @@
 from django.urls import path
 
 from strata.app.views import (
+    GithubRepositorySyncEndpoint,
     IntegrationEndpoint,
+    ProjectSlackSyncEndpoint,
     WorkspaceIntegrationEndpoint,
     WorkspaceIntegrationProviderEndpoint,
 )
@@ -26,5 +28,23 @@ urlpatterns = [
         "workspaces/<str:slug>/workspace-integrations/<uuid:integration_id>/provider/",
         WorkspaceIntegrationProviderEndpoint.as_view(),
         name="workspace-integration-provider",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/workspace-integrations/"
+        "<uuid:integration_id>/github-repository-sync/",
+        GithubRepositorySyncEndpoint.as_view(),
+        name="github-repository-sync",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/workspace-integrations/"
+        "<uuid:integration_id>/project-slack-sync/",
+        ProjectSlackSyncEndpoint.as_view(),
+        name="project-slack-sync",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/workspace-integrations/"
+        "<uuid:integration_id>/project-slack-sync/<uuid:slack_sync_id>/",
+        ProjectSlackSyncEndpoint.as_view(),
+        name="project-slack-sync",
     ),
 ]

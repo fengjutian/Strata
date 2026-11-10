@@ -88,7 +88,8 @@ pnpm dev
 本机跑不了 Docker，或者不想为开发环境留出 12 GB 内存时，可以用仓库根目录的 `local-dev.cmd` 起一套纯本地环境：
 
 ```powershell
-.\local-dev.cmd             # 启动：生成 .env、初始化私有数据库、uv sync、起 API 与前端
+.\local-dev.cmd             # 启动并进入交互日志监控（O/S/L/Q/X 快捷键）
+.\local-dev.cmd -Detach     # 后台启动并立即返回
 .\local-dev.cmd -Status     # 查看状态
 .\local-dev.cmd -Stop       # 全部停止
 .\local-dev.cmd -ResetDb    # 删除并重建本地数据库
@@ -372,7 +373,8 @@ That's it! Remember to refresh your browser if changes don't auto-reload. Happy 
 If Docker is unavailable — or you would rather not reserve 12 GB of RAM for it — the `local-dev.cmd` script at the repo root boots the whole stack natively:
 
 ```powershell
-.\local-dev.cmd             # generate .env, init the private database, uv sync, start API + web apps
+.\local-dev.cmd             # start API + web apps, then enter interactive log monitoring
+.\local-dev.cmd -Detach     # start in the background and return immediately
 .\local-dev.cmd -Status     # show what is running
 .\local-dev.cmd -Stop       # stop everything
 .\local-dev.cmd -ResetDb    # drop and recreate the local database

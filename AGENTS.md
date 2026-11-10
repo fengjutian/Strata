@@ -47,6 +47,13 @@ packages/
 - **测试**：所有功能都需要单元测试，按包使用已有的测试框架（`apps/web` 用 vitest，`packages/blocks` 用 vitest，后端用 pytest）
 - **组件**：基础组件来自已发布的 `@makestrata/propel`（`@makestrata/propel/components/*`、`elements/*`、`icons`）；复合组件与 Strata 专属组件放在 `@strata/blocks`（`packages/blocks`，只允许子路径导入，如 `@strata/blocks/toast`）
 
+## 服务层归属
+
+- **`packages/services`（`@strata/services`）= 共享 API 客户端层**：只放「≥2 个应用共用」或「公开分享页专用（`Sites*` 前缀）」的服务类。新增的类必须在同一次改动里被应用 import，否则就是死代码。
+- **`apps/web/services` = web 应用专属的业务语义 API**：方法名按业务语义命名（`createIssue`、`updateCycle` 等），不进 `packages`。它与 `packages/services` **不是新旧代关系**，两套并存、各自演进——不要把「把 web 的服务迁到 packages」当成既定方向。
+- **共同基类 `APIService` 住在 `packages/services/src/api.service.ts`**；`apps/web/services/api.service.ts` 只是注入 401 处理钩子的薄适配层，继承点零改动。新接入的应用直接用 `@strata/services` 导出的 `APIService`。
+- space 的公开分享 API 一律用 `Sites*` 前缀类（`SitesIssueService` 等），不要和 web 的同名业务类混。
+
 ## 后端依赖（uv）
 
 `apps/api` 的依赖用 [uv](https://docs.astral.sh/uv/) 管理：声明在 `apps/api/pyproject.toml`，锁定在 `apps/api/uv.lock`（两者都要提交）。依赖组：`dev` 与 `test`（默认安装，使用 `psycopg-binary`）、`production`（gunicorn + 源码构建的 `psycopg-c`，仅生产镜像与 migration-check 使用）。lint 配置见 `apps/api/ruff.toml`。
@@ -109,6 +116,13 @@ packages/   blocks, constants, editor, hooks, i18n, logger, services,
 - **State Management**: MobX stores. Feature stores live in `apps/web/store`; reusable state lives in `packages/shared-state`. Split responsibilities into layered stores instead of one giant store file
 - **Testing**: All features require unit tests, use the existing test framework per package (vitest in `apps/web` and `packages/blocks`, pytest in `apps/api`)
 - **Components**: Primitives come from the published `@makestrata/propel` npm package (`@makestrata/propel/components/*`, `elements/*`, `icons`); composite/Strata-specific components live in `@strata/blocks` (`packages/blocks`, subpath imports only, e.g. `@strata/blocks/toast`)
+
+## Service layer ownership
+
+- **`packages/services` (`@strata/services`) = shared API client layer**: only services used by **≥2 apps** or dedicated to the public share pages (`Sites*` prefix). A newly added class must be imported by an app in the same change — otherwise it is dead code.
+- **`apps/web/services` = web-only business-semantic API**: methods are named by business meaning (`createIssue`, `updateCycle`, ...); it does **not** belong in `packages`. It and `packages/services` are **not** a new/old generation pair — both live side by side and evolve independently. Do not assume "migrate web's services into packages" is the settled direction.
+- **The shared `APIService` base lives in `packages/services/src/api.service.ts`**; `apps/web/services/api.service.ts` is a thin adapter that injects the 401 handler, so all 45 inheritance points stay untouched. New apps should use the `APIService` exported from `@strata/services`.
+- The public share API in space always uses `Sites*` prefixed classes (`SitesIssueService`, ...); never mix them with the same-named business classes in web.
 
 ## Backend dependencies (uv)
 

@@ -4,14 +4,11 @@
  * See the LICENSE file for details.
  */
 
-export * from "./ai";
 export * from "./api.service";
 export * from "./developer";
 export * from "./auth";
 export * from "./cycle";
-export * from "./dashboard";
 export * from "./instance";
-export * from "./intake";
 export * from "./module";
 export * from "./user";
 export * from "./project";

@@ -26,6 +26,7 @@ import {
 } from "@makestrata/propel/components/dialog";
 import { UserOutline } from "@makestrata/propel/icons";
 import { setToast } from "@strata/blocks/toast";
+import { useTranslation } from "@strata/i18n";
 import { EFileAssetType } from "@strata/types";
 import { getAssetIdFromUrl, getFileURL, checkURLValidity } from "@strata/utils";
 // helpers
@@ -64,6 +65,7 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
   const { workspaceSlug } = useParams();
   // store hooks
   const { currentWorkspace, updateWorkspaceLogo } = useWorkspace();
+  const { t } = useTranslation();
   const effectiveAvatarSeed = avatarSeed || currentWorkspace?.name || "workspace";
   const generatedAvatar = useMemo(
     () => createDiceBearAvatarDataUri(avatarStyle, effectiveAvatarSeed),
@@ -111,10 +113,10 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
       const message =
         typeof error === "object" && error !== null && "error" in error && typeof error.error === "string"
           ? error.error
-          : "Something went wrong";
+          : t("workspace_settings.settings.general.logo_dialog.error_message");
       setToast({
         type: "error",
-        title: "Error",
+        title: t("workspace_settings.settings.general.logo_dialog.error_title"),
         message,
       });
     } finally {
@@ -152,7 +154,7 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
         <DialogMain>
           <DialogHeader>
             <DialogHeading>
-              <DialogTitle>Upload image</DialogTitle>
+              <DialogTitle>{t("workspace_settings.settings.general.logo_dialog.title")}</DialogTitle>
             </DialogHeading>
           </DialogHeader>
           <DialogBody tabIndex={0}>
@@ -163,14 +165,18 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
               value={activeTab}
               onValueChange={(nextTab) => nextTab && setActiveTab(nextTab)}
             >
-              <TabsList aria-label="Workspace image source">
-                <Tab value="generate" label="Generate avatar" />
-                <Tab value="upload" label="Upload image" />
+              <TabsList aria-label={t("workspace_settings.settings.general.logo_dialog.source_label")}>
+                <Tab value="generate" label={t("workspace_settings.settings.general.logo_dialog.generate_tab")} />
+                <Tab value="upload" label={t("workspace_settings.settings.general.logo_dialog.upload_tab")} />
               </TabsList>
               <TabsPanel value="generate">
                 <div className="mt-5 space-y-5">
                   <div className="flex justify-center">
-                    <img src={generatedAvatar} alt="Generated workspace avatar" className="size-40 rounded-xl" />
+                    <img
+                      src={generatedAvatar}
+                      alt={t("workspace_settings.settings.general.logo_dialog.generated_preview_alt")}
+                      className="size-40 rounded-xl"
+                    />
                   </div>
                   <InputField
                     id="workspace-avatar-seed"
@@ -178,14 +184,16 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
                     type="text"
                     size="lg"
                     orientation="vertical"
-                    label="Avatar seed"
+                    label={t("workspace_settings.settings.general.logo_dialog.seed_label")}
                     value={avatarSeed}
-                    placeholder={currentWorkspace?.name ?? "Workspace name"}
+                    placeholder={currentWorkspace?.name ?? t("workspace_settings.settings.general.name")}
                     onChange={(event) => setAvatarSeed(event.target.value)}
-                    description="Use the same seed to generate the same avatar."
+                    description={t("workspace_settings.settings.general.logo_dialog.seed_description")}
                   />
                   <div>
-                    <p className="mb-2 text-body-sm-medium">Style</p>
+                    <p className="mb-2 text-body-sm-medium">
+                      {t("workspace_settings.settings.general.logo_dialog.style_label")}
+                    </p>
                     <div className="grid grid-cols-3 gap-3">
                       {DICEBEAR_AVATAR_STYLES.map(({ key, label }) => {
                         const preview = createDiceBearAvatarDataUri(key, effectiveAvatarSeed);
@@ -200,7 +208,11 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
                             aria-pressed={avatarStyle === key}
                           >
                             <img src={preview} alt="" className="size-16 rounded-md" />
-                            <span className="text-body-xs-medium">{label}</span>
+                            <span className="text-body-xs-medium">
+                              {t(`workspace_settings.settings.general.logo_dialog.styles.${key}`, {
+                                defaultValue: label,
+                              })}
+                            </span>
                           </button>
                         );
                       })}
@@ -223,11 +235,17 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
                         {image !== null || (value && value !== "") ? (
                           <>
                             <div className="absolute top-2 right-2 z-40">
-                              <Button type="button" variant="secondary" size="xs" stretch="auto" label="Edit" />
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="xs"
+                                stretch="auto"
+                                label={t("workspace_settings.settings.general.logo_dialog.edit")}
+                              />
                             </div>
                             <img
                               src={image ? URL.createObjectURL(image) : value ? getFileURL(value) : ""}
-                              alt="Workspace logo preview"
+                              alt={t("workspace_settings.settings.general.logo_dialog.logo_preview_alt")}
                               className="absolute top-0 left-0 h-full w-full rounded-md object-cover"
                             />
                           </>
@@ -235,7 +253,9 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
                           <div>
                             <UserOutline className="mx-auto h-16 w-16 text-secondary" />
                             <span className="mt-2 block text-body-xs-medium text-secondary">
-                              {isDragActive ? "Drop image here to upload" : "Drag & drop image here"}
+                              {isDragActive
+                                ? t("workspace_settings.settings.general.logo_dialog.drop_active")
+                                : t("workspace_settings.settings.general.logo_dialog.drop_idle")}
                             </span>
                           </div>
                         )}
@@ -246,13 +266,13 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
                     {fileRejections.length > 0 && (
                       <p className="text-body-xs-regular text-danger-primary">
                         {fileRejections[0].errors[0].code === "file-too-large"
-                          ? "The image size cannot exceed 5 MB."
-                          : "Please upload a file in a valid format."}
+                          ? t("workspace_settings.settings.general.logo_dialog.file_too_large")
+                          : t("workspace_settings.settings.general.logo_dialog.invalid_file")}
                       </p>
                     )}
                   </div>
                   <p className="text-body-xs-regular text-secondary">
-                    File formats supported- .jpeg, .jpg, .png, .webp
+                    {t("workspace_settings.settings.general.logo_dialog.supported_formats")}
                   </p>
                 </div>
               </TabsPanel>
@@ -265,18 +285,34 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
               variant="danger"
               size="md"
               stretch="auto"
-              label={isRemoving ? "Removing" : "Remove"}
+              label={
+                isRemoving
+                  ? t("workspace_settings.settings.general.logo_dialog.removing")
+                  : t("workspace_settings.settings.general.logo_dialog.remove")
+              }
               onClick={handleImageRemove}
               disabled={!value}
               loading={isRemoving}
             />
           </DialogInfo>
-          <Button variant="secondary" size="md" stretch="auto" label="Cancel" onClick={handleClose} />
+          <Button
+            variant="secondary"
+            size="md"
+            stretch="auto"
+            label={t("workspace_settings.settings.general.logo_dialog.cancel")}
+            onClick={handleClose}
+          />
           <Button
             variant="primary"
             size="md"
             stretch="auto"
-            label={isImageUploading ? "Saving" : activeTab === "generate" ? "Generate & Save" : "Upload & Save"}
+            label={
+              isImageUploading
+                ? t("workspace_settings.settings.general.logo_dialog.saving")
+                : activeTab === "generate"
+                  ? t("workspace_settings.settings.general.logo_dialog.generate_and_save")
+                  : t("workspace_settings.settings.general.logo_dialog.upload_and_save")
+            }
             onClick={handleSubmit}
             disabled={activeTab === "upload" && !image}
             loading={isImageUploading}

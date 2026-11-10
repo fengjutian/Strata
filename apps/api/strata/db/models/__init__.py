@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 from .analytic import AnalyticView
+from .automation import AutomationExecution, AutomationRule
 from .api import APIActivityLog, APIToken
 from .asset import FileAsset
 from .base import BaseModel

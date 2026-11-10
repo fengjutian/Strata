@@ -121,6 +121,7 @@ from .intake import (
 )
 
 from .analytic import AnalyticViewSerializer
+from .automation import AutomationRuleSerializer
 
 from .notification import NotificationSerializer, UserNotificationPreferenceSerializer
 

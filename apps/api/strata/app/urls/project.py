@@ -18,10 +18,21 @@ from strata.app.views import (
     UserProjectRolesEndpoint,
     ProjectArchiveUnarchiveEndpoint,
     ProjectMemberPreferenceEndpoint,
+    AutomationRuleViewSet,
 )
 
 
 urlpatterns = [
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/automation-rules/",
+        AutomationRuleViewSet.as_view({"get": "list", "post": "create"}),
+        name="automation-rules",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/automation-rules/<uuid:pk>/",
+        AutomationRuleViewSet.as_view({"get": "retrieve", "patch": "partial_update", "delete": "destroy"}),
+        name="automation-rule",
+    ),
     path(
         "workspaces/<str:slug>/projects/",
         ProjectViewSet.as_view({"get": "list", "post": "create"}),

@@ -204,6 +204,7 @@ from .analytic.base import (
     DefaultAnalyticsEndpoint,
     ProjectStatsEndpoint,
 )
+from .automation import AutomationRuleViewSet
 
 from .analytic.advance import (
     AdvanceAnalyticsEndpoint,

@@ -221,7 +221,9 @@ class TestWorkspaceIntegrationProviderEndpoint:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.django_db
-    def test_cannot_uninstall_another_workspaces_integration(self, session_client, workspace, workspace_integration, db):
+    def test_cannot_uninstall_another_workspaces_integration(
+        self, session_client, workspace, workspace_integration, db
+    ):
         """The workspace in the URL scopes the delete.
 
         A workspace admin who learns another workspace's integration id still

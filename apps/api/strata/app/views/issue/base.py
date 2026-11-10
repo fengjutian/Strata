@@ -74,6 +74,7 @@ from strata.utils.issue_filters import issue_filters
 from strata.utils.order_queryset import order_issue_queryset
 from strata.utils.paginator import GroupedOffsetPaginator, SubGroupedOffsetPaginator
 from strata.utils.timezone_converter import user_timezone_converter
+from strata.services.automation import run_issue_automations
 
 from .. import BaseAPIView, BaseViewSet
 
@@ -417,6 +418,9 @@ class IssueViewSet(BaseViewSet):
 
         if serializer.is_valid():
             serializer.save()
+            run_issue_automations(
+                issue_id=serializer.data["id"], trigger="issue_created", actor_id=request.user.id
+            )
 
             # Track the issue
             issue_activity.delay(
@@ -682,6 +686,10 @@ class IssueViewSet(BaseViewSet):
             serializer.save()
             # Read-only fields are ignored on save, so they are not reported as changes either.
             accepted_data = writable_data(serializer, request.data)
+            if "state_id" in accepted_data and str(accepted_data["state_id"]) != str(issue.state_id):
+                run_issue_automations(
+                    issue_id=issue.id, trigger="issue_state_changed", actor_id=request.user.id
+                )
             # Check if the update is a migration description update
             is_migration_description_update = skip_activity and is_description_update
             # Log all the updates

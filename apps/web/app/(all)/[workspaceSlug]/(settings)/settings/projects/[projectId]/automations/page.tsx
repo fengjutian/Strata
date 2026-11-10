@@ -11,7 +11,7 @@ import { useTranslation } from "@strata/i18n";
 import { setToast } from "@strata/blocks/toast";
 import type { IProject } from "@strata/types";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
-import { AutoArchiveAutomation, AutoCloseAutomation } from "@/components/automation";
+import { AutoArchiveAutomation, AutoCloseAutomation, RuleAutomation } from "@/components/automation";
 import { PageHead } from "@/components/core/page-title";
 import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 import { SettingsHeading } from "@/components/settings/heading";
@@ -66,6 +66,11 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
         <div className="mt-6 flex flex-col gap-4">
           <AutoArchiveAutomation handleChange={handleChange} />
           <AutoCloseAutomation handleChange={handleChange} />
+          <RuleAutomation
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            disabled={!canPerformProjectAdminActions}
+          />
         </div>
       </section>
     </SettingsContentWrapper>

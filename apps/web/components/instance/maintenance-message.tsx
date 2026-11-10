@@ -8,7 +8,7 @@ export function MaintenanceMessage() {
   const linkMap = [
     {
       key: "mail_to",
-      label: "Contact Support",
+      label: "联系支持团队",
       value: "mailto:support@strata.so",
     },
   ];
@@ -16,12 +16,9 @@ export function MaintenanceMessage() {
   return (
     <>
       <div className="flex flex-col gap-2.5">
-        <h1 className="text-left text-h5-semibold text-primary">
-          &#x1F6A7; Looks like Strata didn&apos;t start up correctly!
-        </h1>
+        <h1 className="text-left text-h5-semibold text-primary">&#x1F6A7; Strata 似乎未能正常启动！</h1>
         <span className="text-left text-body-sm-medium text-secondary">
-          Some services might have failed to start. Please check your container logs to identify and resolve the issue.
-          If you&apos;re stuck, reach out to our support team for more help.
+          某些服务可能启动失败。请检查容器日志以定位并解决问题。如果仍无法解决，请联系支持团队获取帮助。
         </span>
       </div>
       <div className="mt-1 flex items-center justify-start gap-6">

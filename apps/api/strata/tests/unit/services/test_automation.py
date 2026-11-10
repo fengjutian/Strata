@@ -1,7 +1,19 @@
 import pytest
 
-from strata.db.models import AutomationExecution, AutomationRule, Issue
+from strata.db.models import AutomationExecution, AutomationRule, Issue, Project, ProjectMember
 from strata.services.automation import run_issue_automations
+
+
+@pytest.fixture
+def project(db, workspace, create_user):
+    project = Project.objects.create(name="Automation", identifier="AUTO", workspace=workspace)
+    ProjectMember.objects.create(project=project, member=create_user, role=20, is_active=True)
+    return project
+
+
+@pytest.fixture
+def issue(project):
+    return Issue.objects.create(name="Automate me", priority="medium", project=project, workspace=project.workspace)
 
 
 @pytest.mark.django_db

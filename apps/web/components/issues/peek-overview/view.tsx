@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { CSSProperties } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
@@ -31,6 +32,7 @@ import { IssuePeekOverviewHeader } from "./header";
 import { PeekOverviewIssueDetails } from "./issue-detail";
 import { IssuePeekOverviewLoader } from "./loader";
 import { PeekOverviewProperties } from "./properties";
+import { PEEK_MAX_WIDTH, PEEK_MIN_WIDTH, useResizablePeek } from "./use-resizable-peek";
 
 interface IIssueView {
   workspaceSlug: string;
@@ -67,6 +69,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   const [isArchiveIssueModalOpen, setIsArchiveIssueModalOpen] = useState(false);
   const [isDuplicateIssueModalOpen, setIsDuplicateIssueModalOpen] = useState(false);
   const [isEditIssueModalOpen, setIsEditIssueModalOpen] = useState(false);
+  const { width, isResizing, startResizing, handleResizeKeyDown, resetWidth } = useResizablePeek();
   // ref
   const issuePeekOverviewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorRefApi>(null);
@@ -127,12 +130,13 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
 
   const peekOverviewIssueClassName = cn(
     !embedIssue
-      ? "absolute z-[25] flex flex-col overflow-hidden rounded-sm border border-subtle bg-surface-1 transition-all duration-300"
+      ? "absolute z-[25] flex flex-col overflow-hidden rounded-sm border border-subtle bg-surface-1"
       : `h-full w-full`,
     !embedIssue && {
-      "top-0 right-0 bottom-0 w-full border-0 border-l md:w-[50%]": peekMode === "side-peek",
+      "top-0 right-0 bottom-0 w-full border-0 border-l md:w-[var(--work-item-peek-width)]": peekMode === "side-peek",
       "top-[8.33%] left-[8.33%] size-5/6": peekMode === "modal",
       "absolute inset-0 m-4": peekMode === "full-screen",
+      "transition-all duration-300": !isResizing,
     }
   );
 
@@ -151,10 +155,30 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
           ref={issuePeekOverviewRef}
           className={peekOverviewIssueClassName}
           style={{
+            ...(peekMode === "side-peek" ? ({ "--work-item-peek-width": `${width}px` } as CSSProperties) : undefined),
             boxShadow:
               "0px 4px 8px 0px rgba(0, 0, 0, 0.12), 0px 6px 12px 0px rgba(16, 24, 40, 0.12), 0px 1px 16px 0px rgba(16, 24, 40, 0.12)",
           }}
         >
+          {!embedIssue && peekMode === "side-peek" && (
+            <div
+              className={cn(
+                "absolute top-0 bottom-0 left-0 z-30 hidden w-1 -translate-x-1/2 cursor-col-resize outline-none md:block",
+                "hover:bg-accent-strong focus-visible:bg-accent-strong",
+                isResizing && "bg-accent-strong w-1.5"
+              )}
+              onDoubleClick={resetWidth}
+              onMouseDown={startResizing}
+              onKeyDown={handleResizeKeyDown}
+              role="separator"
+              tabIndex={0}
+              aria-label="Resize work item details"
+              aria-orientation="vertical"
+              aria-valuemin={PEEK_MIN_WIDTH}
+              aria-valuemax={PEEK_MAX_WIDTH}
+              aria-valuenow={width}
+            />
+          )}
           {isError ? (
             <div className="relative h-screen w-full overflow-hidden">
               <IssuePeekOverviewError removeRoutePeekId={removeRoutePeekId} />

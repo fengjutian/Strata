@@ -47,6 +47,58 @@ def slack_sync_url(slug, project_id, integration_id, slack_sync_id=None):
 
 
 @pytest.mark.contract
+class TestWorkspaceIntegrationGithubRepositoriesEndpoint:
+    """GET /api/workspaces/<slug>/workspace-integrations/<id>/github-repositories"""
+
+    @pytest.mark.django_db
+    def test_lists_repositories_in_the_workspace(self, session_client, workspace, project, workspace_integration):
+        """Repositories known to the workspace are listed."""
+        GithubRepository.objects.create(
+            project=project,
+            name="plane",
+            owner="makestrata",
+            repository_id="123456",
+            url="https://github.com/makestrata/plane",
+        )
+
+        response = session_client.get(
+            reverse(
+                "workspace-integration-github-repositories",
+                kwargs={"slug": workspace.slug, "integration_id": workspace_integration.id},
+            ),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["name"] == "plane"
+        assert response.data[0]["repository_id"] == "123456"
+
+    @pytest.mark.django_db
+    def test_unknown_integration_is_not_found(self, session_client, workspace):
+        """An integration that is not in this workspace is a 404."""
+        response = session_client.get(
+            reverse(
+                "workspace-integration-github-repositories",
+                kwargs={"slug": workspace.slug, "integration_id": uuid4()},
+            ),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.django_db
+    def test_requires_authentication(self, api_client, workspace, workspace_integration):
+        """The endpoint is not public."""
+        response = api_client.get(
+            reverse(
+                "workspace-integration-github-repositories",
+                kwargs={"slug": workspace.slug, "integration_id": workspace_integration.id},
+            ),
+        )
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.contract
 class TestGithubRepositorySyncEndpoint:
     """Project-level GitHub repository sync."""
 

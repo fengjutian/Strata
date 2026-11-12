@@ -359,29 +359,62 @@ const measurePluginCoalescing = async (editor: Editor, target: Target, events: n
 /* -------------------------------------------------------------------------- */
 
 /**
+ * Counts the reads that force the browser to lay the document out. A read after a write is the
+ * expensive kind: the browser has to lay everything out again before it can answer.
+ */
+let layoutReads = 0;
+
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+Element.prototype.getBoundingClientRect = function (...args: Parameters<Element["getBoundingClientRect"]>) {
+  layoutReads += 1;
+  return originalGetBoundingClientRect.apply(this, args);
+};
+
+const originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
+if (originalOffsetWidth?.get) {
+  Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+    configurable: true,
+    get(this: HTMLElement) {
+      layoutReads += 1;
+      return originalOffsetWidth.get?.call(this) as number;
+    },
+    set(this: HTMLElement, value: number) {
+      originalOffsetWidth.set?.call(this, value);
+    },
+  });
+}
+
+/**
  * Splits a transaction into the part that runs the plugin pipeline and the part that updates the
  * DOM. The first is optimizable JavaScript, the second is browser work that no editor change can
  * remove.
  */
-const measurePipeline = (editor: Editor, count: number) => {
+const measurePipeline = (editor: Editor, count: number, position = 1) => {
   const applyTimes: number[] = [];
   const updateTimes: number[] = [];
+  const reads: number[] = [];
 
   for (let i = 0; i < count; i++) {
-    const tr = editor.state.tr.insertText("x", 1);
+    const tr = editor.state.tr.insertText("x", position);
 
     const applyStart = performance.now();
     const next = editor.state.apply(tr);
     const applyEnd = performance.now();
 
+    layoutReads = 0;
     editor.view.updateState(next);
     const updateEnd = performance.now();
 
     applyTimes.push(applyEnd - applyStart);
     updateTimes.push(updateEnd - applyEnd);
+    reads.push(layoutReads);
   }
 
-  return { applyMs: summarize(applyTimes), updateStateMs: summarize(updateTimes) };
+  return {
+    applyMs: summarize(applyTimes),
+    updateStateMs: summarize(updateTimes),
+    layoutReads: summarize(reads),
+  };
 };
 
 /**
@@ -629,7 +662,7 @@ const findCellPosition = (editor: Editor, target: number) => {
   let position = 0;
 
   editor.state.doc.descendants((node, pos) => {
-    if (node.type.name !== "table_cell" && node.type.name !== "table_header") return;
+    if (node.type.name !== "tableCell" && node.type.name !== "tableHeader") return;
 
     seen += 1;
     if (seen === target) {
@@ -645,6 +678,38 @@ const findCellPosition = (editor: Editor, target: number) => {
 };
 
 /**
+ * The interval between two painted frames while the user types.
+ *
+ * The synchronous cost of a keystroke does not include the layout and the paint that follow it.
+ * A table that is rewritten on every keystroke shows up here and nowhere else: the frame that
+ * carries the keystroke is late.
+ */
+const measureFramePacing = async (editor: Editor, position: number, keystrokes: number) => {
+  const frameTimes: number[] = [];
+  let last = performance.now();
+  let running = true;
+
+  const tick = () => {
+    const now = performance.now();
+    frameTimes.push(now - last);
+    last = now;
+    if (running) requestAnimationFrame(tick);
+  };
+
+  requestAnimationFrame(tick);
+
+  for (let i = 0; i < keystrokes; i++) {
+    await nextRealFrame();
+    editor.commands.insertContentAt(position, "x");
+  }
+
+  running = false;
+  await nextRealFrame();
+
+  return summarize(frameTimes);
+};
+
+/**
  * The cost of a keystroke in a document that is made of tables, next to the cost of a keystroke in
  * a document with a comparable number of nodes.
  *
@@ -655,11 +720,7 @@ const findCellPosition = (editor: Editor, target: number) => {
  * Two positions are measured, because they are different: the start of the document, and a cell in
  * the middle of the tables, which is where a user actually types.
  */
-const measureTableHeavy = async (options: {
-  label: string;
-  content: string;
-  inCell?: boolean;
-}) => {
+const measureTableHeavy = async (options: { label: string; content: string; inCell?: boolean }) => {
   const { label, content, inCell } = options;
 
   const editor = createEditor(0, [], content);
@@ -680,9 +741,21 @@ const measureTableHeavy = async (options: {
     typeTimes.push(performance.now() - started);
   }
 
+  const pipeline = measurePipeline(editor, 30, position);
+
+  const frameEditor = createEditor(0, [], content);
+  await nextPacedFrame();
+  const frameMs = await measureFramePacing(frameEditor, inCell ? findCellPosition(frameEditor, 100) : 1, 30);
+  frameEditor.destroy();
+
   const profileEditor = createEditor(0, [], content);
   await nextPacedFrame();
-  const top = profilePlugins(profileEditor, 50);
+  const top = profilePlugins(profileEditor, 50)
+    .slice(0, 6)
+    .map((entry) => ({
+      plugin: entry.id.split(" ")[0],
+      perCallMs: entry.perCallMs,
+    }));
   profileEditor.destroy();
 
   editor.destroy();
@@ -692,6 +765,8 @@ const measureTableHeavy = async (options: {
     nodes: nodeCount,
     position,
     typeMs: summarize(typeTimes),
+    pipeline,
+    frameMs,
     top,
   };
 };
@@ -847,9 +922,7 @@ const main = async () => {
 
     // The paragraph document is the baseline every other measurement was taken on.
     tableHeavy.push(await measureTableHeavy({ label: "paragraphs-640", content: buildContent(640) }));
-    tableHeavy.push(
-      await measureTableHeavy({ label: "tables-10x8x4-start", content: buildTableContent(10, 8, 4) })
-    );
+    tableHeavy.push(await measureTableHeavy({ label: "tables-10x8x4-start", content: buildTableContent(10, 8, 4) }));
     tableHeavy.push(
       await measureTableHeavy({
         label: "tables-10x8x4-in-cell",
@@ -857,9 +930,7 @@ const main = async () => {
         inCell: true,
       })
     );
-    tableHeavy.push(
-      await measureTableHeavy({ label: "tables-20x8x4-start", content: buildTableContent(20, 8, 4) })
-    );
+    tableHeavy.push(await measureTableHeavy({ label: "tables-20x8x4-start", content: buildTableContent(20, 8, 4) }));
 
     payload.tableHeavy = tableHeavy;
   }

@@ -10,6 +10,24 @@ import { TableMap, updateColumnsOnResize } from "@tiptap/pm/tables";
 import type { Decoration, NodeView } from "@tiptap/pm/view";
 import { h } from "jsx-dom-cjs";
 
+/**
+ * The column widths that `updateColumnsOnResize` writes are derived from the first row of the
+ * table: the colspan and the colwidth of its cells.
+ */
+export const getColumnWidthKey = (node: ProseMirrorNode) => {
+  const row = node.firstChild;
+  if (!row) return "";
+
+  let key = "";
+
+  row.forEach((cell) => {
+    const { colspan, colwidth } = cell.attrs as { colspan: number; colwidth: number[] | null };
+    key += `${colspan}:${colwidth?.join(",") ?? ""};`;
+  });
+
+  return key;
+};
+
 export class TableView implements NodeView {
   node: ProseMirrorNode;
   cellMinWidth: number;
@@ -23,6 +41,12 @@ export class TableView implements NodeView {
   colgroup: HTMLTableColElement;
   tbody: HTMLElement;
   controls?: HTMLElement;
+  /**
+   * The column widths that were written last. Writing the width of a table invalidates its
+   * layout, and the next read has to lay the whole table out again - which is why a keystroke in
+   * a table is far more expensive than a keystroke in a paragraph.
+   */
+  columnWidthKey: string;
 
   get dom() {
     return this.root;
@@ -46,6 +70,7 @@ export class TableView implements NodeView {
     this.getPos = getPos;
     this.hoveredCell = null;
     this.map = TableMap.get(node);
+    this.columnWidthKey = "";
 
     this.colgroup = h(
       "colgroup",
@@ -81,11 +106,21 @@ export class TableView implements NodeView {
   }
 
   render() {
+    let columnsReplaced = false;
+
     if (this.colgroup.children.length !== this.map.width) {
       const cols = Array.from({ length: this.map.width }, () => 1).map(() => h("col"));
       this.colgroup.replaceChildren(...cols);
+      columnsReplaced = true;
     }
 
+    // The widths only change when the first row changes, and rewriting the width of a table
+    // invalidates its layout. Writing it again for every keystroke makes the browser lay the
+    // whole table out again before the next read.
+    const key = getColumnWidthKey(this.node);
+    if (!columnsReplaced && key === this.columnWidthKey) return;
+
+    this.columnWidthKey = key;
     updateColumnsOnResize(this.node, this.colgroup, this.table, this.cellMinWidth);
   }
 

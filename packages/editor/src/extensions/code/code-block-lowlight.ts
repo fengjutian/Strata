@@ -8,7 +8,7 @@
 
 import type { CodeBlockOptions } from "./code-block";
 import { CodeBlock } from "./code-block";
-import { LowlightPlugin } from "./lowlight-plugin";
+import { LOWLIGHT_PLUGIN_MARKER, LowlightPlugin } from "./lowlight-plugin";
 
 type CodeBlockLowlightOptions = CodeBlockOptions & {
   lowlight: any;
@@ -30,13 +30,24 @@ export const CodeBlockLowlight = CodeBlock.extend<CodeBlockLowlightOptions>({
   },
 
   addProseMirrorPlugins() {
+    // In Tiptap v3 `this.parent` resolves to the parent's complete `addProseMirrorPlugins`, not just to
+    // the plugins that are missing here. When this extension is extended further (for example
+    // `CodeBlockLowlight.extend(...)`) the parent therefore already contributes a lowlight plugin, and
+    // registering it a second time doubles the full-document scan the plugin performs on every transaction.
+    const parentPlugins = this.parent?.() || [];
+    const hasLowlightPlugin = parentPlugins.some((plugin) => plugin.spec[LOWLIGHT_PLUGIN_MARKER]);
+
     return [
-      ...(this.parent?.() || []),
-      LowlightPlugin({
-        name: this.name,
-        lowlight: this.options.lowlight,
-        defaultLanguage: this.options.defaultLanguage,
-      }),
+      ...parentPlugins,
+      ...(hasLowlightPlugin
+        ? []
+        : [
+            LowlightPlugin({
+              name: this.name,
+              lowlight: this.options.lowlight,
+              defaultLanguage: this.options.defaultLanguage,
+            }),
+          ]),
     ];
   },
 });

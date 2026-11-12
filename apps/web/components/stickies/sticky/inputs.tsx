@@ -77,7 +77,7 @@ export function StickyInput(props: TProps) {
             workspaceSlug={workspaceSlug}
             workspaceId={workspaceId}
             onChange={(_description, description_html) => {
-              onChange(description_html);
+              onChange(description_html());
               handleSubmit(handleFormSubmit)();
             }}
             placeholder={(_, value) => {

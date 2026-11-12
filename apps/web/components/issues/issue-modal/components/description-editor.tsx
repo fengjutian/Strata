@@ -189,8 +189,8 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
                 workspaceSlug={workspaceSlug?.toString()}
                 workspaceId={workspaceId}
                 projectId={projectId}
-                onChange={(_description: object, description_html: string) => {
-                  onChange(description_html);
+                onChange={(_description: () => object, description_html: () => string) => {
+                  onChange(description_html());
                   handleFormChange();
                 }}
                 onEnterKeyPress={() => submitBtnRef?.current?.click()}

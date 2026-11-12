@@ -1,0 +1,4 @@
+/* Same stylesheet recipe as apps/web/styles/globals.css, but pointed at the editor sources so the
+   bench does not require a build of the package first. */
+@import "@strata/tailwind-config/index.css";
+@import "../src/styles/index.css";

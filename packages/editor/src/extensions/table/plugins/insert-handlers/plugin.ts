@@ -52,6 +52,10 @@ export const TableInsertPlugin = (editor: Editor): Plugin => {
   };
 
   const updateAllTables = () => {
+    if (editor.isDestroyed) {
+      return;
+    }
+
     if (!editor.isEditable) {
       // Clean up all tables if editor is not editable
       tableMap.forEach((_, tableElement) => {
@@ -82,7 +86,9 @@ export const TableInsertPlugin = (editor: Editor): Plugin => {
     key: TABLE_INSERT_PLUGIN_KEY,
 
     view() {
-      setTimeout(updateAllTables, 0);
+      // The timer has to be cleared on destroy, otherwise it fires after the view is gone and
+      // `findAllTables` dereferences a destroyed editor.
+      const initialUpdateTimeout = setTimeout(updateAllTables, 0);
 
       return {
         update(view, prevState) {
@@ -92,6 +98,7 @@ export const TableInsertPlugin = (editor: Editor): Plugin => {
           }
         },
         destroy() {
+          clearTimeout(initialUpdateTimeout);
           // Clean up all tables
           tableMap.forEach((_, tableElement) => {
             cleanupTable(tableElement);

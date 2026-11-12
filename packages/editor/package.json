@@ -25,9 +25,10 @@
   },
   "scripts": {
     "build": "tsc && tsdown",
+    "bench:browser": "vite --config harness/vite.config.ts",
     "dev": "tsdown --watch --no-clean",
     "check:lint": "oxlint --max-warnings=416 .",
-    "check:types": "tsc --noEmit",
+    "check:types": "tsc --noEmit && tsc --noEmit -p harness/tsconfig.json",
     "check:format": "oxfmt --check .",
     "test": "vitest run",
     "fix:lint": "oxlint --fix .",
@@ -93,6 +94,7 @@
     "postcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

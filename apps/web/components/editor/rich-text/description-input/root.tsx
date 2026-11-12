@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { debounce } from "lodash-es";
 import { observer } from "mobx-react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 // strata imports
 import type { EditorRefApi, TExtensions } from "@strata/editor";
 import { useTranslation } from "@strata/i18n";
@@ -132,6 +132,22 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
   const hasUnsavedChanges = useRef(false);
   // ref to track last saved content (to skip onChange when content hasn't actually changed)
   const lastSavedContent = useRef(initialValue?.trim() === "" ? "<p></p>" : (initialValue ?? "<p></p>"));
+  // The editor hands the content over as getters. Serializing the document walks the whole document,
+  // and the description is only needed when it is saved - which is debounced. The getters are resolved
+  // at the latest possible moment, while the editor is still alive.
+  const contentGetters = useRef<{ html: () => string; json: () => object } | null>(null);
+  const resolvedContent = useRef<{ html: string; json: object } | null>(null);
+
+  const resolveContent = useCallback(() => {
+    const getters = contentGetters.current;
+    if (!getters) return null;
+
+    const html = getters.html();
+    // An empty document means the editor is gone, there is nothing left to save.
+    if (!html) return null;
+
+    return { html, json: getters.json() };
+  }, []);
   // store hooks
   const { getWorkspaceBySlug } = useWorkspace();
   const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
@@ -140,7 +156,7 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
   // translation
   const { t } = useTranslation();
   // form info
-  const { handleSubmit, reset, control, setValue } = useForm<TFormData>({
+  const { handleSubmit, reset, setValue } = useForm<TFormData>({
     defaultValues: {
       id: entityId,
       description_html: initialValue?.trim() ?? "",
@@ -151,17 +167,24 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
   // submit handler
   const handleDescriptionFormSubmit = useCallback(
     async (formData: TFormData) => {
+      const content = resolvedContent.current ?? resolveContent();
+
+      if (!content) return;
+
+      // The content did not change since the last save, so there is nothing to send.
+      if (content.html === lastSavedContent.current) return;
+
       await onSubmit(
         {
-          description_html: formData.description_html,
-          description_json: formData.description_json,
+          description_html: content.html,
+          description_json: content.json,
         },
         formData.isMigrationUpdate
       );
       // Update lastSavedContent after successful save
-      lastSavedContent.current = formData.description_html;
+      lastSavedContent.current = content.html;
     },
-    [onSubmit]
+    [onSubmit, resolveContent]
   );
 
   // reset form values
@@ -189,6 +212,8 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedFormSave = useCallback(
     debounce(async () => {
+      // Resolve the content now: the editor is still alive at this point.
+      resolvedContent.current = resolveContent();
       handleSubmit(handleDescriptionFormSubmit)()
         .catch((error) => console.error(`Failed to save description for ${entityId}:`, error))
         .finally(() => {
@@ -196,7 +221,7 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
           hasUnsavedChanges.current = false;
         });
     }, 1500),
-    [entityId, handleSubmit]
+    [entityId, handleSubmit, resolveContent]
   );
 
   // Save on unmount if there are unsaved changes
@@ -205,6 +230,9 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
       debouncedFormSave.cancel();
 
       if (hasUnsavedChanges.current) {
+        // Resolve the content while the editor is still alive: this cleanup runs before the editor is
+        // destroyed, but the submit handler below runs after it.
+        resolvedContent.current = resolveContent();
         handleSubmit(handleDescriptionFormSubmit)()
           .catch((error) => {
             console.error("Failed to save description on unmount:", error);
@@ -225,73 +253,67 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
   if (!localDescription.description_html) return <DescriptionInputLoader />;
 
   return (
-    <Controller
-      name="description_html"
-      control={control}
-      render={({ field: { onChange } }) => (
-        <RichTextEditor
-          key={entityId}
-          editable={!disabled}
-          ref={editorRef}
-          id={entityId}
-          issueSequenceId={issueSequenceId}
-          disabledExtensions={disabledExtensions}
-          initialValue={localDescription.description_html ?? "<p></p>"}
-          value={swrDescription ?? null}
-          workspaceSlug={workspaceSlug}
-          workspaceId={workspaceDetails.id}
-          projectId={projectId}
-          dragDropEnabled
-          onChange={(description_json, description_html, options) => {
-            if (description_html === lastSavedContent.current) return;
-            setIsSubmitting("submitting");
-            onChange(description_html);
-            setValue("isMigrationUpdate", !!options?.isMigrationUpdate);
-            setValue("description_json", description_json);
-            hasUnsavedChanges.current = true;
-            debouncedFormSave();
-          }}
-          placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
-          searchMentionCallback={async (payload) =>
-            await workspaceService.searchEntity(workspaceSlug?.toString() ?? "", {
-              ...payload,
-              project_id: projectId,
-            })
-          }
-          containerClassName={containerClassName}
-          uploadFile={async (blockId, file) => {
-            try {
-              const { asset_id } = await uploadEditorAsset({
-                blockId,
-                data: {
-                  entity_identifier: entityId,
-                  entity_type: fileAssetType,
-                },
-                file,
-                projectId,
-                workspaceSlug,
-              });
-              return asset_id;
-            } catch (error) {
-              console.log("Error in uploading asset:", error);
-              throw new Error("Asset upload failed. Please try again later.", { cause: error });
-            }
-          }}
-          duplicateFile={async (assetId: string) => {
-            try {
-              const { asset_id } = await duplicateEditorAsset({
-                assetId,
-                entityType: fileAssetType,
-                projectId,
-                workspaceSlug,
-              });
-              return asset_id;
-            } catch {
-              throw new Error("Asset duplication failed. Please try again later.");
-            }
-          }}
-        />
-      )}
+    <RichTextEditor
+      key={entityId}
+      editable={!disabled}
+      ref={editorRef}
+      id={entityId}
+      issueSequenceId={issueSequenceId}
+      disabledExtensions={disabledExtensions}
+      initialValue={localDescription.description_html ?? "<p></p>"}
+      value={swrDescription ?? null}
+      workspaceSlug={workspaceSlug}
+      workspaceId={workspaceDetails.id}
+      projectId={projectId}
+      dragDropEnabled
+      onChange={(description_json, description_html, options) => {
+        // Keep the getters instead of the content: serializing the document walks the whole document,
+        // and the description is only needed when it is saved.
+        contentGetters.current = { html: description_html, json: description_json };
+        setIsSubmitting("submitting");
+        setValue("isMigrationUpdate", !!options?.isMigrationUpdate);
+        hasUnsavedChanges.current = true;
+        debouncedFormSave();
+      }}
+      placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
+      searchMentionCallback={async (payload) =>
+        await workspaceService.searchEntity(workspaceSlug?.toString() ?? "", {
+          ...payload,
+          project_id: projectId,
+        })
+      }
+      containerClassName={containerClassName}
+      uploadFile={async (blockId, file) => {
+        try {
+          const { asset_id } = await uploadEditorAsset({
+            blockId,
+            data: {
+              entity_identifier: entityId,
+              entity_type: fileAssetType,
+            },
+            file,
+            projectId,
+            workspaceSlug,
+          });
+          return asset_id;
+        } catch (error) {
+          console.log("Error in uploading asset:", error);
+          throw new Error("Asset upload failed. Please try again later.", { cause: error });
+        }
+      }}
+      duplicateFile={async (assetId: string) => {
+        try {
+          const { asset_id } = await duplicateEditorAsset({
+            assetId,
+            entityType: fileAssetType,
+            projectId,
+            workspaceSlug,
+          });
+          return asset_id;
+        } catch {
+          throw new Error("Asset duplication failed. Please try again later.");
+        }
+      }}
     />
   );
 });

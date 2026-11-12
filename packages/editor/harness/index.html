@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strata editor · browser bench</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 0;
+      }
+      #editor-host {
+        width: 800px;
+        margin: 0 auto;
+        min-height: 400px;
+      }
+      /* Keep the document tall enough to scroll like a real page. */
+      #editor-host .ProseMirror {
+        min-height: 200vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor-host"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

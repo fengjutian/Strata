@@ -94,7 +94,7 @@ export const AddComment = observer(function AddComment(props: Props) {
                   ? watch("comment_html")
                   : value
               }
-              onChange={(comment_json, comment_html) => onChange(comment_html)}
+              onChange={(comment_json, comment_html) => onChange(comment_html())}
               isSubmitting={isSubmitting}
               placeholder="Add comment..."
               uploadFile={async (blockId, file) => {

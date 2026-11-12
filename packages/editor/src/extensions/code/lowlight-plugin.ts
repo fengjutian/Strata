@@ -81,6 +81,12 @@ function isFunction(param: () => any) {
   return typeof param === "function";
 }
 
+/**
+ * Marks the plugin so that a parent implementation can tell that the lowlight plugin is already
+ * registered. See `CodeBlockLowlight.addProseMirrorPlugins`.
+ */
+export const LOWLIGHT_PLUGIN_MARKER = "strataLowlightPlugin";
+
 export function LowlightPlugin({
   name,
   lowlight,
@@ -96,6 +102,7 @@ export function LowlightPlugin({
 
   const lowlightPlugin: Plugin = new Plugin({
     key: new PluginKey("lowlight"),
+    [LOWLIGHT_PLUGIN_MARKER]: true,
 
     state: {
       init: (_, { doc }) =>

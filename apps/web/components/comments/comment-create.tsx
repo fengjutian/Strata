@@ -155,7 +155,7 @@ export const CommentCreate = observer(function CommentCreate(props: TCommentCrea
                     handleEditorReady={setIsEditorReady}
                     initialValue={value ?? "<p></p>"}
                     containerClassName="min-h-min max-h-[200px] overflow-y-auto overscroll-contain"
-                    onChange={(comment_json, comment_html) => onChange(comment_html)}
+                    onChange={(comment_json, comment_html) => onChange(comment_html())}
                     isSubmitting={isSubmitting}
                     uploadFile={async (blockId, file) => {
                       const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);

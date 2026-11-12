@@ -89,9 +89,22 @@ export const useEditor = (props: TEditorHookProps) => {
         onTransaction?.();
       },
       onUpdate: ({ editor: updatedEditor, transaction }) => {
+        // Serializing the document is expensive (HTML serialization dominates on large documents), so it
+        // must not run when nobody consumes the result. Guard before evaluating the arguments: an
+        // optional call still evaluates its arguments eagerly.
+        if (!onChange) return;
+
         // Check if this update is only due to migration update
         const isMigrationUpdate = transaction?.getMeta("uniqueIdOnlyChange") === true;
-        onChange?.(updatedEditor.getJSON(), updatedEditor.getHTML(), { isMigrationUpdate });
+
+        // The document is handed over as getters: serializing it walks the whole document, and most
+        // consumers only need the result when they actually save - not on every keystroke. The getters
+        // read the current state when they are called, so the content is never stale.
+        onChange(
+          () => (updatedEditor.isDestroyed ? {} : updatedEditor.getJSON()),
+          () => (updatedEditor.isDestroyed ? "" : updatedEditor.getHTML()),
+          { isMigrationUpdate }
+        );
       },
       onDestroy: () => handleEditorReady?.(false),
       onFocus: onEditorFocus,

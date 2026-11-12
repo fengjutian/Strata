@@ -141,7 +141,7 @@ export const CommentCard = observer(function CommentCard(props: Props) {
                   id={comment.id}
                   initialValue={value}
                   value={null}
-                  onChange={(comment_json, comment_html) => onChange(comment_html)}
+                  onChange={(comment_json, comment_html) => onChange(comment_html())}
                   isSubmitting={isSubmitting}
                   showSubmitButton={false}
                   uploadFile={async (blockId, file) => {

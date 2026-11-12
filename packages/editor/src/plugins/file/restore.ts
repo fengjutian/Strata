@@ -42,27 +42,38 @@ export const TrackFileRestorationPlugin = (editor: Editor, restoreHandler: TFile
         }
       });
 
-      transactions.forEach(() => {
-        const addedFiles: TFileNode[] = [];
+      // The scan below does not depend on the transaction, so it runs once instead of once per
+      // transaction. The asset updates it triggers are still replayed for every transaction, so the
+      // editor sees the same calls in the same order as before.
+      const addedFiles: TFileNode[] = [];
+      const assetNodes: Array<{ node: TFileNode; nodeType: keyof NodeFileMapType }> = [];
 
-        newState.doc.descendants((node, pos) => {
-          const nodeType = node.type.name as keyof NodeFileMapType;
-          const isAValidNode = NODE_FILE_MAP[nodeType];
-          // if the node doesn't match, then return as no point in checking
-          if (!isAValidNode) return;
-          if (pos < 0 || pos > newState.doc.content.size) return;
-          if (oldFileSources[nodeType]?.has(node.attrs.src)) return;
-          // update assets list storage value
+      newState.doc.descendants((node, pos) => {
+        const nodeType = node.type.name as keyof NodeFileMapType;
+        const isAValidNode = NODE_FILE_MAP[nodeType];
+        // if the node doesn't match, then return as no point in checking
+        if (!isAValidNode) return;
+        if (pos < 0 || pos > newState.doc.content.size) return;
+        if (oldFileSources[nodeType]?.has(node.attrs.src)) return;
+        // update assets list storage value
+        const assetMetaData = CORE_ASSETS_META_DATA_RECORD[nodeType]?.(node.attrs);
+        if (assetMetaData) {
+          assetNodes.push({ node: node as TFileNode, nodeType });
+        }
+        // if the src is just a id (private bucket), then we don't need to handle restore from here but
+        // only while it fails to load
+        if (nodeType === CORE_EXTENSIONS.CUSTOM_IMAGE && !node.attrs.src?.startsWith("http")) return;
+        addedFiles.push(node as TFileNode);
+      });
+
+      transactions.forEach(() => {
+        assetNodes.forEach(({ node, nodeType }) => {
           const assetMetaData = CORE_ASSETS_META_DATA_RECORD[nodeType]?.(node.attrs);
-          if (assetMetaData) {
-            editor.commands.updateAssetsList?.({
-              asset: assetMetaData,
-            });
-          }
-          // if the src is just a id (private bucket), then we don't need to handle restore from here but
-          // only while it fails to load
-          if (nodeType === CORE_EXTENSIONS.CUSTOM_IMAGE && !node.attrs.src?.startsWith("http")) return;
-          addedFiles.push(node as TFileNode);
+          if (!assetMetaData) return;
+
+          editor.commands.updateAssetsList?.({
+            asset: assetMetaData,
+          });
         });
 
         addedFiles.forEach(async (node) => {

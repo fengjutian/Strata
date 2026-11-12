@@ -30,6 +30,9 @@ export type SideMenuPluginProps = {
   };
 };
 
+/** Shared handle for the side menu plugin, so callers can address it on a state. */
+export const SIDE_MENU_PLUGIN_KEY = new PluginKey("sideMenu");
+
 export type SideMenuHandleOptions = {
   view: (view: EditorView, sideMenu: HTMLDivElement | null) => { destroy: () => void } | void;
   domEvents?: {
@@ -80,8 +83,103 @@ const SideMenu = (options: SideMenuPluginProps) => {
   const { view: dragHandleView, domEvents: dragHandleDOMEvents } = DragHandlePlugin(options);
   const { view: aiHandleView, domEvents: aiHandleDOMEvents } = AIHandlePlugin(options);
 
+  /**
+   * Positioning the side menu forces layout (`elementsFromPoint`, `getComputedStyle`,
+   * `getBoundingClientRect`) and then writes new styles, so the next event has to lay
+   * the document out again. Doing that on every `mousemove` event thrashes layout at
+   * mouse-event frequency, so events are coalesced into a single update per frame and
+   * only the latest coordinates are used.
+   */
+  let pendingFrame: number | null = null;
+  let pendingView: EditorView | null = null;
+  let pendingCoords: { clientX: number; clientY: number } | null = null;
+
+  const cancelPendingUpdate = () => {
+    if (pendingFrame !== null) {
+      cancelAnimationFrame(pendingFrame);
+      pendingFrame = null;
+    }
+    pendingView = null;
+    pendingCoords = null;
+  };
+
+  const updateSideMenu = (view: EditorView, clientX: number, clientY: number) => {
+    const node = nodeDOMAtCoords({
+      x: clientX + 50 + options.dragHandleWidth,
+      y: clientY,
+    });
+
+    if (!(node instanceof Element) || node.matches("ul, ol")) {
+      hideSideMenu();
+      return;
+    }
+
+    const compStyle = window.getComputedStyle(node);
+    const lineHeight = parseInt(compStyle.lineHeight, 10);
+    const paddingTop = parseInt(compStyle.paddingTop, 10);
+
+    const rect = absoluteRect(node);
+
+    rect.top += (lineHeight - 20) / 2;
+    rect.top += paddingTop;
+
+    if (handlesConfig.ai) {
+      rect.left -= 20;
+    }
+
+    if (node.parentElement?.parentElement?.matches("td") || node.parentElement?.parentElement?.matches("th")) {
+      if (node.matches("ul:not([data-type=taskList]) li, ol li")) {
+        rect.left -= 5;
+      }
+    } else {
+      // Li markers
+      if (node.matches("ul:not([data-type=taskList]) li, ol li")) {
+        rect.left -= 18;
+      }
+    }
+
+    if (node.matches("table")) {
+      rect.top += 8;
+      rect.left -= 8;
+    }
+
+    rect.width = options.dragHandleWidth;
+
+    if (!editorSideMenu) return;
+
+    editorSideMenu.style.left = `${rect.left - rect.width}px`;
+    editorSideMenu.style.top = `${rect.top}px`;
+    showSideMenu();
+    if (handlesConfig.dragDrop) {
+      dragHandleDOMEvents?.mousemove();
+    }
+    if (handlesConfig.ai) {
+      aiHandleDOMEvents?.mousemove?.();
+    }
+  };
+
+  const scheduleSideMenuUpdate = (view: EditorView, event: MouseEvent) => {
+    pendingView = view;
+    pendingCoords = { clientX: event.clientX, clientY: event.clientY };
+
+    if (pendingFrame !== null) return;
+
+    pendingFrame = requestAnimationFrame(() => {
+      pendingFrame = null;
+
+      const currentView = pendingView;
+      const coords = pendingCoords;
+      pendingView = null;
+      pendingCoords = null;
+
+      if (!currentView || !coords || !currentView.editable) return;
+
+      updateSideMenu(currentView, coords.clientX, coords.clientY);
+    });
+  };
+
   return new Plugin({
-    key: new PluginKey("sideMenu"),
+    key: SIDE_MENU_PLUGIN_KEY,
     view: (view) => {
       const handleViews: { destroy: () => void }[] = [];
       hideSideMenu();
@@ -99,6 +197,7 @@ const SideMenu = (options: SideMenuPluginProps) => {
 
       return {
         destroy: () => {
+          cancelPendingUpdate();
           handleViews.forEach((handleView) => handleView.destroy());
           editorSideMenu.remove();
         },
@@ -109,61 +208,14 @@ const SideMenu = (options: SideMenuPluginProps) => {
         mousemove: (view, event) => {
           if (!view.editable) return;
 
-          const node = nodeDOMAtCoords({
-            x: event.clientX + 50 + options.dragHandleWidth,
-            y: event.clientY,
-          });
-
-          if (!(node instanceof Element) || node.matches("ul, ol")) {
-            hideSideMenu();
-            return;
-          }
-
-          const compStyle = window.getComputedStyle(node);
-          const lineHeight = parseInt(compStyle.lineHeight, 10);
-          const paddingTop = parseInt(compStyle.paddingTop, 10);
-
-          const rect = absoluteRect(node);
-
-          rect.top += (lineHeight - 20) / 2;
-          rect.top += paddingTop;
-
-          if (handlesConfig.ai) {
-            rect.left -= 20;
-          }
-
-          if (node.parentElement?.parentElement?.matches("td") || node.parentElement?.parentElement?.matches("th")) {
-            if (node.matches("ul:not([data-type=taskList]) li, ol li")) {
-              rect.left -= 5;
-            }
-          } else {
-            // Li markers
-            if (node.matches("ul:not([data-type=taskList]) li, ol li")) {
-              rect.left -= 18;
-            }
-          }
-
-          if (node.matches("table")) {
-            rect.top += 8;
-            rect.left -= 8;
-          }
-
-          rect.width = options.dragHandleWidth;
-
-          if (!editorSideMenu) return;
-
-          editorSideMenu.style.left = `${rect.left - rect.width}px`;
-          editorSideMenu.style.top = `${rect.top}px`;
-          showSideMenu();
-          if (handlesConfig.dragDrop) {
-            dragHandleDOMEvents?.mousemove();
-          }
-          if (handlesConfig.ai) {
-            aiHandleDOMEvents?.mousemove?.();
-          }
+          scheduleSideMenuUpdate(view, event);
         },
         // keydown: () => hideSideMenu(),
-        mousewheel: () => hideSideMenu(),
+        mousewheel: () => {
+          // A queued update would re-show the menu at a position that is stale after the scroll.
+          cancelPendingUpdate();
+          hideSideMenu();
+        },
         dragenter: (view) => {
           if (handlesConfig.dragDrop) {
             dragHandleDOMEvents?.dragenter?.(view);

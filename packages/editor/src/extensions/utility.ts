@@ -5,6 +5,8 @@
  */
 
 import { Extension } from "@tiptap/core";
+import type { Plugin } from "@tiptap/pm/state";
+import { PluginKey } from "@tiptap/pm/state";
 import codemark from "prosemirror-codemark";
 // helpers
 import { CORE_EXTENSIONS } from "@/constants/extension";
@@ -61,6 +63,33 @@ type Props = Pick<IEditorProps, "disabledExtensions" | "flaggedExtensions" | "ge
   isTouchDevice: boolean;
 };
 
+const CODEMARK_INPUT_RULE_PLUGIN_KEY = new PluginKey("codemarkInputRule");
+
+/** `Plugin.key` and `PluginKey.key` are read at runtime but are not part of the public ProseMirror types. */
+type WithRuntimeKey = { key: string };
+
+/**
+ * `prosemirror-codemark` returns an input-rule plugin without a ProseMirror key. Keyless plugins take
+ * their key from a per-module counter, and `prosemirror-state` is loaded twice here: `prosemirror-codemark`
+ * is CommonJS and is loaded by Node, while `@tiptap/pm/state` ships sources and is bundled by Vite. Each
+ * copy counts independently, so the keyless plugin can end up with the very same key as Tiptap's keymap
+ * plugin, and ProseMirror then refuses to start the editor with
+ * "Adding different instances of a keyed plugin (plugin$)".
+ *
+ * Re-keying the plugin is safe: the package looks the plugin up through the instance it closes over, and
+ * ProseMirror resolves that through the same key string.
+ */
+const withExplicitPluginKeys = (plugins: Plugin[]) =>
+  plugins.map((plugin) => {
+    if (plugin.spec.key) {
+      return plugin;
+    }
+
+    (plugin as unknown as WithRuntimeKey).key = (CODEMARK_INPUT_RULE_PLUGIN_KEY as unknown as WithRuntimeKey).key;
+
+    return plugin;
+  });
+
 export const UtilityExtension = (props: Props) => {
   const { disabledExtensions, flaggedExtensions, fileHandler, getEditorMetaData, isEditable, isTouchDevice } = props;
   const { restore } = fileHandler;
@@ -76,7 +105,7 @@ export const UtilityExtension = (props: Props) => {
           isEditable,
           fileHandler,
         }),
-        ...codemark({ markType: this.editor.schema.marks.code }),
+        ...withExplicitPluginKeys(codemark({ markType: this.editor.schema.marks.code })),
         MarkdownClipboardPlugin({
           editor: this.editor,
           getEditorMetaData,

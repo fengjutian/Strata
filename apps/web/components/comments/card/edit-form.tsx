@@ -138,7 +138,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
             initialValue={commentHTML ?? ""}
             value={null}
             handleEditorReady={setIsEditorReady}
-            onChange={(_comment_json, comment_html) => setValue("comment_html", comment_html)}
+            onChange={(_comment_json, comment_html) => setValue("comment_html", comment_html())}
             onEnterKeyPress={(e) => {
               if (!isEmpty && !isSubmitting) {
                 handleSubmit(onEnter)(e);

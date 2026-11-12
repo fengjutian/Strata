@@ -12,11 +12,13 @@ import * as Y from "yjs";
 import { convertHTMLToMarkdown } from "@strata/utils";
 // components
 import { getEditorMenuItems } from "@/components/menus";
+// extensions
+import { getHeadingsFromState } from "@/extensions/headings-list";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 import { CORE_EDITOR_META } from "@/constants/meta";
 // types
-import type { EditorRefApi, IEditorProps, TEditorCommands } from "@/types";
+import type { EditorRefApi, IEditorProps, IMarking, TEditorCommands } from "@/types";
 // local imports
 import { getParagraphCount } from "./common";
 import { insertContentAtSavedSelection } from "./insert-content-at-cursor-position";
@@ -83,7 +85,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       paragraphs: getParagraphCount(editor?.state),
       words: editor?.storage.characterCount?.words?.() ?? 0,
     }),
-    getHeadings: () => (editor ? editor.storage.headingsList?.headings : []),
+    getHeadings: () => getHeadingsFromState(editor),
     getMarkDown: () => {
       if (!editor) return "";
       const editorHTML = editor.getHTML();
@@ -220,21 +222,18 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       };
     },
     onHeadingChange: (callback) => {
-      const handleHeadingChange = () => {
-        if (!editor) return;
-        const headings = editor.storage.headingsList?.headings;
-        if (headings) {
-          callback(headings);
-        }
+      const handleHeadingChange = (payload: { headings: IMarking[] }) => {
+        callback(payload.headings);
       };
 
-      // Subscribe to update event emitted from headers extension
-      editor?.on("update", handleHeadingChange);
+      // Subscribe to the dedicated headings event. The previous implementation listened to `update`, which
+      // fires on every document change and forced consumers to re-read (and re-serialize) the whole document.
+      editor?.on("headingsChange", handleHeadingChange);
       // Return a function to unsubscribe to the continuous transactions of
       // the editor on unmounting the component that has subscribed to this
       // method
       return () => {
-        editor?.off("update", handleHeadingChange);
+        editor?.off("headingsChange", handleHeadingChange);
       };
     },
     onStateChange: (callback) => {

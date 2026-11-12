@@ -18,7 +18,7 @@ import { getHeadingsFromState } from "@/extensions/headings-list";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 import { CORE_EDITOR_META } from "@/constants/meta";
 // types
-import type { EditorRefApi, IEditorProps, IMarking, TEditorCommands } from "@/types";
+import type { EditorRefApi, IEditorProps, IMarking, TDocumentInfo, TEditorCommands } from "@/types";
 // local imports
 import { getParagraphCount } from "./common";
 import { insertContentAtSavedSelection } from "./insert-content-at-cursor-position";
@@ -28,6 +28,21 @@ type TArgs = Pick<IEditorProps, "getEditorMetaData"> & {
   editor: Editor | null;
   provider: HocuspocusProvider | undefined;
 };
+
+/**
+ * How often the document info is refreshed while the document keeps changing.
+ *
+ * Reading the counts walks the whole document three times - once for the characters, once for the
+ * words and once for the paragraphs - and the counts are informational, so refreshing them on every
+ * keystroke costs more than it is worth.
+ */
+const DOCUMENT_INFO_THROTTLE_MS = 200;
+
+const readDocumentInfo = (editor: Editor | null): TDocumentInfo => ({
+  characters: editor?.storage.characterCount?.characters?.() ?? 0,
+  paragraphs: getParagraphCount(editor?.state),
+  words: editor?.storage.characterCount?.words?.() ?? 0,
+});
 
 export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
   const { editor, getEditorMetaData, provider } = args;
@@ -80,11 +95,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         json: documentJSON,
       };
     },
-    getDocumentInfo: () => ({
-      characters: editor?.storage.characterCount?.characters?.() ?? 0,
-      paragraphs: getParagraphCount(editor?.state),
-      words: editor?.storage.characterCount?.words?.() ?? 0,
-    }),
+    getDocumentInfo: () => readDocumentInfo(editor),
     getHeadings: () => getHeadingsFromState(editor),
     getMarkDown: () => {
       if (!editor) return "";
@@ -203,13 +214,29 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
     },
     listenToRealTimeUpdate: () => provider && { on: provider.on.bind(provider), off: provider.off.bind(provider) },
     onDocumentInfoChange: (callback) => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      let lastEmit = 0;
+
+      const emit = () => {
+        timer = null;
+        lastEmit = Date.now();
+        callback(readDocumentInfo(editor));
+      };
+
       const handleDocumentInfoChange = () => {
         if (!editor?.storage) return;
-        callback({
-          characters: editor.storage.characterCount?.characters?.() ?? 0,
-          paragraphs: getParagraphCount(editor?.state),
-          words: editor.storage.characterCount?.words?.() ?? 0,
-        });
+
+        const elapsed = Date.now() - lastEmit;
+
+        // The first change is reported right away, the following ones are folded into one report
+        // per throttle window.
+        if (elapsed >= DOCUMENT_INFO_THROTTLE_MS) {
+          emit();
+          return;
+        }
+
+        if (timer) return;
+        timer = setTimeout(emit, DOCUMENT_INFO_THROTTLE_MS - elapsed);
       };
 
       // Subscribe to update event emitted from character count extension
@@ -219,6 +246,10 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       // method
       return () => {
         editor?.off("update", handleDocumentInfoChange);
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
       };
     },
     onHeadingChange: (callback) => {

@@ -115,3 +115,23 @@ export const getParagraphCount = (editorState: EditorState | undefined) => {
   });
   return paragraphCount;
 };
+
+/**
+ * Compares two maps of toolbar item states.
+ *
+ * The toolbars recompute their states on every editor transaction. Handing the new states to
+ * `setState` unconditionally re-renders the toolbar even when nothing changed, so the consumer
+ * keeps the previous object when the states are equal - React compares the state with `Object.is`
+ * and ends the update without rendering.
+ */
+export const areActiveStatesEqual = (
+  previous: Record<string, boolean>,
+  next: Record<string, boolean>
+): boolean => {
+  const previousKeys = Object.keys(previous);
+  const nextKeys = Object.keys(next);
+
+  if (previousKeys.length !== nextKeys.length) return false;
+
+  return previousKeys.every((key) => previous[key] === next[key]);
+};

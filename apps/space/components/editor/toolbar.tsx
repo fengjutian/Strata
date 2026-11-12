@@ -16,7 +16,7 @@ import {
   ToolbarToggle,
 } from "@makestrata/propel/components/toolbar";
 import { Tooltip, TooltipProvider } from "@makestrata/propel/components/tooltip";
-import { TOOLBAR_ITEMS } from "@strata/editor";
+import { TOOLBAR_ITEMS, areActiveStatesEqual } from "@strata/editor";
 import type { ToolbarMenuItem, EditorRefApi } from "@strata/editor";
 import { useTranslation } from "@strata/i18n";
 
@@ -55,7 +55,11 @@ export function IssueCommentToolbar(props: Props) {
           ...item.extraProps,
         });
       });
-    setActiveStates(newActiveStates);
+    // This runs on every editor transaction, and most transactions do not change any active state.
+    // Keeping the previous object when nothing changed lets React end the update without rendering.
+    setActiveStates((previous) =>
+      areActiveStatesEqual(previous, newActiveStates) ? previous : newActiveStates
+    );
   }, [editorRef]);
 
   // useEffect to call updateActiveStates when isActive prop changes

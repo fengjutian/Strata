@@ -254,10 +254,21 @@ export const TextAlignItem = (editor: Editor): EditorMenuItem<"text-align"> => (
   icon: AlignCenterOutline,
 });
 
+/**
+ * The menu items close over the editor and read its state when they are asked whether they are
+ * active, so the array itself never has to be rebuilt. Building it for every toolbar item turned
+ * one state recomputation into fourteen menu constructions, and the toolbar recomputes on every
+ * transaction - every keystroke and every cursor movement.
+ */
+const menuItemsCache = new WeakMap<Editor, EditorMenuItem<TEditorCommands>[]>();
+
 export const getEditorMenuItems = (editor: Editor | null): EditorMenuItem<TEditorCommands>[] => {
   if (!editor) return [];
 
-  return [
+  const cached = menuItemsCache.get(editor);
+  if (cached) return cached;
+
+  const items = [
     TextItem(editor),
     HeadingOneItem(editor),
     HeadingTwoItem(editor),
@@ -282,4 +293,8 @@ export const getEditorMenuItems = (editor: Editor | null): EditorMenuItem<TEdito
     BackgroundColorItem(editor),
     TextAlignItem(editor),
   ] as EditorMenuItem<TEditorCommands>[];
+
+  menuItemsCache.set(editor, items);
+
+  return items;
 };

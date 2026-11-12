@@ -103,6 +103,37 @@ const createEditor = (paragraphs: number, extraExtensions: Extension[] = []) =>
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
+/**
+ * Waits for the next animation frame, but does not depend on it.
+ *
+ * A browser window that is not in the foreground has its animation frames throttled to roughly one
+ * per second, which stretches a benchmark that paces itself on frames to minutes. The timer is the
+ * floor, the frame is the ceiling: when the window is visible the frame wins and the pacing is
+ * unchanged, when it is not the timer keeps the benchmark moving.
+ */
+const FRAME_TIMEOUT_MS = 32;
+
+const nextPacedFrame = () =>
+  new Promise<void>((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    requestAnimationFrame(finish);
+    setTimeout(finish, FRAME_TIMEOUT_MS);
+  });
+
+/**
+ * Waits for a real animation frame. Required where the measurement depends on the browser
+ * coalescing work into frames - the side menu schedules its update on an animation frame, so a
+ * timer-based wait would report the update as still pending.
+ */
+const nextRealFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
 const percentile = (values: number[], p: number) => {
   if (!values.length) return 0;
   const sorted = values.toSorted((a, b) => a - b);
@@ -257,7 +288,7 @@ const runBursts = async (target: Target, bursts: number, perBurst: number, perFr
       writeTimes.push(result.writeMs);
       if (result.hit) hits++;
     }
-    if (perFrame) await nextFrame();
+    if (perFrame) await nextRealFrame();
   }
 
   const totalMs = performance.now() - started;
@@ -294,8 +325,10 @@ const measurePluginCoalescing = async (editor: Editor, target: Target, events: n
 
   const duringBurst = counters.currentHitTests - before;
 
-  await nextFrame();
-  await nextFrame();
+  // The plugin schedules its update on an animation frame, so a real frame has to pass before the
+  // hit test can show up.
+  await nextRealFrame();
+  await nextRealFrame();
 
   const afterFrame = counters.currentHitTests - before;
   phase = "idle";
@@ -433,7 +466,7 @@ const profilePlugins = (editor: Editor, transactions: number) => {
  */
 const measureDocumentInfo = async (paragraphs: number) => {
   const editor = createEditor(paragraphs);
-  await nextFrame();
+  await nextPacedFrame();
 
   const totalTimes: number[] = [];
   const characterTimes: number[] = [];
@@ -458,7 +491,7 @@ const measureDocumentInfo = async (paragraphs: number) => {
   editor.on("update", handleUpdate);
 
   for (let i = 0; i < 30; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     editor.commands.insertContentAt(1, "x");
   }
 
@@ -480,14 +513,14 @@ const measureDocumentInfo = async (paragraphs: number) => {
  */
 const measureSerialization = async (paragraphs: number) => {
   const editor = createEditor(paragraphs);
-  await nextFrame();
+  await nextPacedFrame();
 
   const jsonTimes: number[] = [];
   const htmlTimes: number[] = [];
   const totalTimes: number[] = [];
 
   for (let i = 0; i < 30; i++) {
-    await nextFrame();
+    await nextPacedFrame();
 
     const start = performance.now();
     editor.getJSON();
@@ -517,7 +550,7 @@ const measureSerialization = async (paragraphs: number) => {
  */
 const measureUpdatePath = async (paragraphs: number, serialize: boolean) => {
   const editor = createEditor(paragraphs);
-  await nextFrame();
+  await nextPacedFrame();
 
   const times: number[] = [];
 
@@ -529,7 +562,7 @@ const measureUpdatePath = async (paragraphs: number, serialize: boolean) => {
   });
 
   for (let i = 0; i < 30; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     const started = performance.now();
     editor.commands.insertContentAt(1, "x");
     times.push(performance.now() - started);
@@ -545,7 +578,7 @@ const measureTransactions = async (editor: Editor, count: number) => {
   const selectionTimes: number[] = [];
 
   for (let i = 0; i < count; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     const typeStart = performance.now();
     editor.commands.insertContentAt(1, "x");
     typeTimes.push(performance.now() - typeStart);
@@ -554,7 +587,7 @@ const measureTransactions = async (editor: Editor, count: number) => {
   const position = editor.state.doc.content.size - 2;
 
   for (let i = 0; i < count; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     const selectionStart = performance.now();
     editor.commands.setTextSelection(position);
     selectionTimes.push(performance.now() - selectionStart);
@@ -576,19 +609,19 @@ const measureTransactions = async (editor: Editor, count: number) => {
 
 const scrollToTop = async () => {
   window.scrollTo(0, 0);
-  await nextFrame();
-  await nextFrame();
+  await nextPacedFrame();
+  await nextPacedFrame();
 };
 
 const runLowlightAB = async (paragraphs: number) => {
   const single = createEditor(paragraphs);
-  await nextFrame();
+  await nextPacedFrame();
   const singleResult = await measureTransactions(single, 30);
   const singlePipeline = measurePipeline(single, 60);
   single.destroy();
 
   const duplicated = createEditor(paragraphs, [DuplicateLowlightExtension]);
-  await nextFrame();
+  await nextPacedFrame();
   const duplicatedResult = await measureTransactions(duplicated, 30);
   const duplicatedPipeline = measurePipeline(duplicated, 60);
   duplicated.destroy();
@@ -647,86 +680,112 @@ const write = (payload: Record<string, unknown>) => {
   });
 };
 
+/**
+ * Sections can be selected with `?sections=reactCost,updatePath`. Without the parameter every
+ * section runs. Selecting sections keeps a measurement cycle short, which matters when the browser
+ * window is not in the foreground and its animation frames are throttled to about one per second.
+ */
+const requestedSections = new URLSearchParams(window.location.search).get("sections");
+
+const sectionEnabled = (name: string) =>
+  !requestedSections || requestedSections.split(",").some((entry) => entry.trim() === name);
+
 const main = async () => {
-  const lowlightAB = [];
-  for (const paragraphs of [50, 200, 1000]) {
-    lowlightAB.push(await runLowlightAB(paragraphs));
+  const payload: Record<string, unknown> = {};
+
+  if (sectionEnabled("lowlightAB")) {
+    const lowlightAB = [];
+    for (const paragraphs of [50, 200, 1000]) {
+      lowlightAB.push(await runLowlightAB(paragraphs));
+    }
+    payload.lowlightAB = lowlightAB;
   }
 
-  const sideMenuAB = [];
-  for (const paragraphs of [50, 1000]) {
-    sideMenuAB.push(await runSideMenuAB(paragraphs));
+  if (sectionEnabled("sideMenuAB")) {
+    const sideMenuAB = [];
+    for (const paragraphs of [50, 1000]) {
+      sideMenuAB.push(await runSideMenuAB(paragraphs));
+    }
+    payload.sideMenuAB = sideMenuAB;
   }
 
-  const updatePath = [];
-  for (const paragraphs of [50, 200, 1000]) {
-    updatePath.push({
-      paragraphs,
-      eager: await measureUpdatePath(paragraphs, true),
-      lazy: await measureUpdatePath(paragraphs, false),
-    });
+  if (sectionEnabled("updatePath")) {
+    const updatePath = [];
+    for (const paragraphs of [50, 200, 1000]) {
+      updatePath.push({
+        paragraphs,
+        eager: await measureUpdatePath(paragraphs, true),
+        lazy: await measureUpdatePath(paragraphs, false),
+      });
+    }
+    payload.updatePath = updatePath;
   }
 
-  const serialization = [];
-  for (const paragraphs of [50, 200, 1000]) {
-    serialization.push(await measureSerialization(paragraphs));
+  if (sectionEnabled("serialization")) {
+    const serialization = [];
+    for (const paragraphs of [50, 200, 1000]) {
+      serialization.push(await measureSerialization(paragraphs));
+    }
+    payload.serialization = serialization;
   }
 
-  const documentInfo = [];
-  for (const paragraphs of [50, 200, 1000]) {
-    documentInfo.push(await measureDocumentInfo(paragraphs));
+  if (sectionEnabled("documentInfo")) {
+    const documentInfo = [];
+    for (const paragraphs of [50, 200, 1000]) {
+      documentInfo.push(await measureDocumentInfo(paragraphs));
+    }
+    payload.documentInfo = documentInfo;
   }
 
-  const profiles = [];
-  for (const paragraphs of [50, 1000]) {
-    const editor = createEditor(paragraphs);
-    await nextFrame();
-    const top = profilePlugins(editor, 50);
-    editor.destroy();
-    profiles.push({ paragraphs, top });
+  if (sectionEnabled("profiles")) {
+    const profiles = [];
+    for (const paragraphs of [50, 1000]) {
+      const editor = createEditor(paragraphs);
+      await nextPacedFrame();
+      const top = profilePlugins(editor, 50);
+      editor.destroy();
+      profiles.push({ paragraphs, top });
+    }
+    payload.profiles = profiles;
   }
 
-  const reactCost = [];
-  for (const paragraphs of [50]) {
-    const currentEditor = createEditor(paragraphs);
-    await nextFrame();
-    const current = await measureReactCost({
-      editor: currentEditor,
-      optimize: false,
-      keystrokes: 30,
-      moves: 30,
-    });
-    currentEditor.destroy();
+  if (sectionEnabled("reactCost")) {
+    const reactCost = [];
+    for (const paragraphs of [50]) {
+      const currentEditor = createEditor(paragraphs);
+      await nextPacedFrame();
+      const current = await measureReactCost({
+        editor: currentEditor,
+        optimize: false,
+        keystrokes: 30,
+        moves: 30,
+      });
+      currentEditor.destroy();
 
-    const optimizedEditor = createEditor(paragraphs);
-    await nextFrame();
-    const optimized = await measureReactCost({
-      editor: optimizedEditor,
-      optimize: true,
-      keystrokes: 30,
-      moves: 30,
-    });
-    optimizedEditor.destroy();
+      const optimizedEditor = createEditor(paragraphs);
+      await nextPacedFrame();
+      const optimized = await measureReactCost({
+        editor: optimizedEditor,
+        optimize: true,
+        keystrokes: 30,
+        moves: 30,
+      });
+      optimizedEditor.destroy();
 
-    reactCost.push({ paragraphs, current, optimized });
+      reactCost.push({ paragraphs, current, optimized });
+    }
+    payload.reactCost = reactCost;
   }
 
-  // Leave a visible editor behind so the page is not blank and real pointer input can be driven.
-  const editor = createEditor(50);
-  await scrollToTop();
-  void editor;
+  if (sectionEnabled("sideMenuAB")) {
+    // Leave a visible editor behind so the page is not blank and real pointer input can be driven.
+    const editor = createEditor(50);
+    await scrollToTop();
+    void editor;
+  }
 
   renderLive();
-  write({
-    lowlightAB,
-    sideMenuAB,
-    updatePath,
-    serialization,
-    documentInfo,
-    profiles,
-    reactCost,
-    diagnostics: runDiagnostics(),
-  });
+  write({ ...payload, diagnostics: runDiagnostics() });
   (window as unknown as { __benchReady: boolean }).__benchReady = true;
 };
 

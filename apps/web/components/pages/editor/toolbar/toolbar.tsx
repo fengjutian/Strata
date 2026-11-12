@@ -20,7 +20,7 @@ import {
 import { Tooltip, TooltipProvider } from "@makestrata/propel/components/tooltip";
 // constants
 import type { ToolbarMenuItem } from "@strata/editor";
-import { TOOLBAR_ITEMS, TYPOGRAPHY_ITEMS } from "@strata/editor";
+import { TOOLBAR_ITEMS, TYPOGRAPHY_ITEMS, areActiveStatesEqual } from "@strata/editor";
 // local imports
 import { ColorDropdown } from "./color-dropdown";
 
@@ -99,7 +99,11 @@ export function PageToolbar(props: Props) {
           ...item.extraProps,
         });
       });
-    setActiveStates(newActiveStates);
+    // This runs on every editor transaction, and most transactions do not change any active state.
+    // Keeping the previous object when nothing changed lets React end the update without rendering.
+    setActiveStates((previous) =>
+      areActiveStatesEqual(previous, newActiveStates) ? previous : newActiveStates
+    );
   }, [editorRef]);
 
   useEffect(() => {

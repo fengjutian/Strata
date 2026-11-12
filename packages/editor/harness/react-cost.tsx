@@ -220,7 +220,26 @@ function Probe(props: ProxyProps) {
   );
 }
 
-const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+const FRAME_TIMEOUT_MS = 32;
+
+/**
+ * Waits for the next animation frame, but does not depend on it. A browser window that is not in
+ * the foreground has its animation frames throttled to roughly one per second, which would stretch
+ * the measurement to minutes. The timer is the floor, the frame is the ceiling.
+ */
+const nextPacedFrame = () =>
+  new Promise<void>((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    requestAnimationFrame(finish);
+    setTimeout(finish, FRAME_TIMEOUT_MS);
+  });
 
 /**
  * Lets React flush. React schedules updates outside of its own events through the scheduler, which
@@ -228,7 +247,7 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
  */
 const flushReact = async () => {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  await nextFrame();
+  await nextPacedFrame();
 };
 
 const summarize = (values: number[]) => {
@@ -281,7 +300,7 @@ export const measureReactCost = async (options: {
   const moveTimes: number[] = [];
 
   for (let i = 0; i < keystrokes; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     const started = performance.now();
     editor.commands.insertContentAt(1, "x");
     typeTimes.push(performance.now() - started);
@@ -291,7 +310,7 @@ export const measureReactCost = async (options: {
   const position = editor.state.doc.content.size - 2;
 
   for (let i = 0; i < moves; i++) {
-    await nextFrame();
+    await nextPacedFrame();
     const started = performance.now();
     editor.commands.setTextSelection(position);
     moveTimes.push(performance.now() - started);

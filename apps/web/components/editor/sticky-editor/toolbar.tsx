@@ -14,7 +14,7 @@ import { Toolbar, ToolbarButton, ToolbarGroup, ToolbarToggle } from "@makestrata
 import { Tooltip, TooltipProvider } from "@makestrata/propel/components/tooltip";
 import { DeleteOutline, PaletteOutline } from "@makestrata/propel/icons";
 import type { EditorRefApi, ToolbarMenuItem } from "@strata/editor";
-import { TOOLBAR_ITEMS } from "@strata/editor";
+import { TOOLBAR_ITEMS, areActiveStatesEqual } from "@strata/editor";
 import type { TSticky } from "@strata/types";
 // local imports
 import { ColorPalette } from "./color-palette";
@@ -52,7 +52,11 @@ export function StickyEditorToolbar(props: Props) {
           ...item.extraProps,
         });
       });
-    setActiveStates(newActiveStates);
+    // This runs on every editor transaction, and most transactions do not change any active state.
+    // Keeping the previous object when nothing changed lets React end the update without rendering.
+    setActiveStates((previous) =>
+      areActiveStatesEqual(previous, newActiveStates) ? previous : newActiveStates
+    );
   }, [editorRef]);
 
   // useEffect to call updateActiveStates when isActive prop changes

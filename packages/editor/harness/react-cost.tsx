@@ -17,6 +17,10 @@
  * The proxy is not the real application: it reproduces the subscription pattern, the state shape and
  * the number of rendered children, but not the real component tree. The numbers are therefore an
  * indication of the order of magnitude, not a measurement of the pages editor itself.
+ *
+ * Both arms run the shipped code where the shipped code exists. The "before" arm rebuilds the menu
+ * array for every item the way the editor did before the menu was cached, and the "after" arm uses
+ * the cached array and keeps the previous state when nothing changed.
  */
 
 /* oxlint-disable no-await-in-loop -- the benchmark paces itself with real frames */
@@ -25,9 +29,37 @@ import type { Editor } from "@tiptap/core";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 // editor internals
-import { getEditorMenuItems } from "@/components/menus";
+import {
+  BackgroundColorItem,
+  BoldItem,
+  BulletListItem,
+  CodeItem,
+  getEditorMenuItems,
+  HeadingOneItem,
+  HeadingTwoItem,
+  HeadingThreeItem,
+  HeadingFourItem,
+  HeadingFiveItem,
+  HeadingSixItem,
+  HorizontalRuleItem,
+  ImageItem,
+  ItalicItem,
+  LinkItem,
+  NumberedListItem,
+  QuoteItem,
+  StrikeThroughItem,
+  TableItem,
+  TextAlignItem,
+  TextColorItem,
+  TextItem,
+  TodoListItem,
+  UnderLineItem,
+} from "@/components/menus";
 import { TOOLBAR_ITEMS } from "@/constants/common";
 import { getParagraphCount } from "@/helpers/common";
+import { getEditorRefHelpers } from "@/helpers/editor-ref";
+import type { EditorMenuItem } from "@/components/menus";
+import type { TEditorCommands } from "@/types";
 
 const toolbarItems = Object.values(TOOLBAR_ITEMS.document).flat();
 
@@ -40,29 +72,69 @@ export type ReactCostStats = {
   infoRenderMs: number[];
   infoRenders: number;
   infoSetStates: number;
+  infoReports: number;
 };
 
+type DocumentInfo = { words: number; characters: number; paragraphs: number };
+
 /**
- * The toolbar's current implementation: for every toolbar item the menu array is rebuilt and
- * searched again, so the menu is built once per item.
+ * The menu array as the editor built it before it was cached: every toolbar item got its own menu.
  */
-const computeActiveStates = (editor: Editor) => {
+const buildUncachedMenuItems = (editor: Editor): EditorMenuItem<TEditorCommands>[] =>
+  [
+    TextItem(editor),
+    HeadingOneItem(editor),
+    HeadingTwoItem(editor),
+    HeadingThreeItem(editor),
+    HeadingFourItem(editor),
+    HeadingFiveItem(editor),
+    HeadingSixItem(editor),
+    BoldItem(editor),
+    ItalicItem(editor),
+    UnderLineItem(editor),
+    StrikeThroughItem(editor),
+    BulletListItem(editor),
+    TodoListItem(editor),
+    CodeItem(editor),
+    NumberedListItem(editor),
+    QuoteItem(editor),
+    TableItem(editor),
+    ImageItem(editor),
+    HorizontalRuleItem(editor),
+    LinkItem(editor),
+    TextColorItem(editor),
+    BackgroundColorItem(editor),
+    TextAlignItem(editor),
+  ] as EditorMenuItem<TEditorCommands>[];
+
+type TMenuItemProps = Parameters<ReturnType<typeof getEditorMenuItems>[number]["isActive"]>[0];
+
+/**
+ * The toolbar items carry their own extra props, and the menu items expect the props of the
+ * command they belong to. The toolbar in the application casts the same way.
+ */
+const buildMenuItemProps = (toolbarItem: (typeof toolbarItems)[number]) =>
+  ({ itemKey: toolbarItem.itemKey, ...toolbarItem.extraProps }) as unknown as TMenuItemProps;
+
+/**
+ * The toolbar's state computation before the menu was cached: for every toolbar item the menu array
+ * was rebuilt and searched again, so the menu was built once per item.
+ */
+const computeActiveStatesUncached = (editor: Editor) => {
   const states: Record<string, boolean> = {};
 
   toolbarItems.forEach((toolbarItem) => {
-    const editorItems = getEditorMenuItems(editor);
+    const editorItems = buildUncachedMenuItems(editor);
     const menuItem = editorItems.find((item) => item.key === toolbarItem.itemKey);
 
-    states[toolbarItem.renderKey] = menuItem
-      ? menuItem.isActive({ itemKey: toolbarItem.itemKey, ...toolbarItem.extraProps })
-      : false;
+    states[toolbarItem.renderKey] = menuItem ? menuItem.isActive(buildMenuItemProps(toolbarItem)) : false;
   });
 
   return states;
 };
 
 /**
- * The same computation with the menu array built once per recomputation instead of once per item.
+ * The same computation with the cached menu array.
  */
 const computeActiveStatesCached = (editor: Editor) => {
   const states: Record<string, boolean> = {};
@@ -71,9 +143,7 @@ const computeActiveStatesCached = (editor: Editor) => {
   toolbarItems.forEach((toolbarItem) => {
     const menuItem = editorItems.find((item) => item.key === toolbarItem.itemKey);
 
-    states[toolbarItem.renderKey] = menuItem
-      ? menuItem.isActive({ itemKey: toolbarItem.itemKey, ...toolbarItem.extraProps })
-      : false;
+    states[toolbarItem.renderKey] = menuItem ? menuItem.isActive(buildMenuItemProps(toolbarItem)) : false;
   });
 
   return states;
@@ -88,26 +158,18 @@ const shallowEqualStates = (a: Record<string, boolean>, b: Record<string, boolea
   return aKeys.every((key) => a[key] === b[key]);
 };
 
-type DocumentInfo = { words: number; characters: number; paragraphs: number };
-
-const computeDocumentInfo = (editor: Editor): DocumentInfo => ({
-  characters: editor.storage.characterCount?.characters?.() ?? 0,
-  paragraphs: getParagraphCount(editor.state),
-  words: editor.storage.characterCount?.words?.() ?? 0,
-});
-
 const ToolbarItemProxy = memo(function ToolbarItemProxy(props: { label: string; active: boolean }) {
   return <span data-active={props.active}>{props.label}</span>;
 });
 
 type ProxyProps = {
   editor: Editor;
-  optimize: boolean;
+  arm: "before" | "after";
   stats: ReactCostStats;
 };
 
 function ToolbarProxy(props: ProxyProps) {
-  const { editor, optimize, stats } = props;
+  const { editor, arm, stats } = props;
   const [states, setStates] = useState<Record<string, boolean>>({});
   const statesRef = useRef(states);
   const renderStart = useRef(0);
@@ -120,10 +182,10 @@ function ToolbarProxy(props: ProxyProps) {
   useEffect(() => {
     const handler = () => {
       const started = performance.now();
-      const next = optimize ? computeActiveStatesCached(editor) : computeActiveStates(editor);
+      const next = arm === "before" ? computeActiveStatesUncached(editor) : computeActiveStatesCached(editor);
       stats.toolbarComputeMs.push(performance.now() - started);
 
-      if (optimize && shallowEqualStates(next, statesRef.current)) return;
+      if (arm === "after" && shallowEqualStates(next, statesRef.current)) return;
 
       statesRef.current = next;
       stats.toolbarSetStates += 1;
@@ -136,7 +198,7 @@ function ToolbarProxy(props: ProxyProps) {
     return () => {
       editor.off("transaction", handler);
     };
-  }, [editor, optimize]);
+  }, [editor, arm]);
 
   useLayoutEffect(() => {
     if (currentIndex <= 1) return;
@@ -158,7 +220,7 @@ function ToolbarProxy(props: ProxyProps) {
 }
 
 function InfoProxy(props: ProxyProps) {
-  const { editor, optimize, stats } = props;
+  const { editor, arm, stats } = props;
   const [info, setInfo] = useState<DocumentInfo>({ words: 0, characters: 0, paragraphs: 0 });
   const infoRef = useRef(info);
   const renderStart = useRef(0);
@@ -169,13 +231,11 @@ function InfoProxy(props: ProxyProps) {
   renderStart.current = performance.now();
 
   useEffect(() => {
-    const handler = () => {
-      const started = performance.now();
-      const next = computeDocumentInfo(editor);
-      stats.infoComputeMs.push(performance.now() - started);
+    const apply = (next: DocumentInfo) => {
+      stats.infoReports += 1;
 
       if (
-        optimize &&
+        arm === "after" &&
         next.words === infoRef.current.words &&
         next.characters === infoRef.current.characters &&
         next.paragraphs === infoRef.current.paragraphs
@@ -188,13 +248,41 @@ function InfoProxy(props: ProxyProps) {
       setInfo(next);
     };
 
+    if (arm === "after") {
+      // The shipped implementation: it throttles the report, because reading the counts walks the
+      // whole document three times.
+      const helpers = getEditorRefHelpers({
+        editor,
+        getEditorMetaData: (() => ({})) as never,
+        provider: undefined,
+      });
+
+      const unsubscribe = helpers.onDocumentInfoChange((next) => {
+        apply(next);
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+
+    const handler = () => {
+      const started = performance.now();
+      const next: DocumentInfo = {
+        characters: editor.storage.characterCount?.characters?.() ?? 0,
+        paragraphs: getParagraphCount(editor.state),
+        words: editor.storage.characterCount?.words?.() ?? 0,
+      };
+      stats.infoComputeMs.push(performance.now() - started);
+      apply(next);
+    };
+
     editor.on("update", handler);
-    handler();
 
     return () => {
       editor.off("update", handler);
     };
-  }, [editor, optimize]);
+  }, [editor, arm]);
 
   useLayoutEffect(() => {
     if (currentIndex <= 1) return;
@@ -228,18 +316,10 @@ const FRAME_TIMEOUT_MS = 32;
  * the measurement to minutes. The timer is the floor, the frame is the ceiling.
  */
 const nextPacedFrame = () =>
-  new Promise<void>((resolve) => {
-    let settled = false;
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    requestAnimationFrame(finish);
-    setTimeout(finish, FRAME_TIMEOUT_MS);
-  });
+  Promise.race([
+    new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    new Promise<void>((resolve) => setTimeout(resolve, FRAME_TIMEOUT_MS)),
+  ]);
 
 /**
  * Lets React flush. React schedules updates outside of its own events through the scheduler, which
@@ -271,11 +351,11 @@ const summarize = (values: number[]) => {
  */
 export const measureReactCost = async (options: {
   editor: Editor;
-  optimize: boolean;
+  arm: "before" | "after";
   keystrokes: number;
   moves: number;
 }) => {
-  const { editor, optimize, keystrokes, moves } = options;
+  const { editor, arm, keystrokes, moves } = options;
 
   const container = document.createElement("div");
   container.style.cssText = "position:absolute;left:-9999px;top:0;width:800px;";
@@ -291,9 +371,10 @@ export const measureReactCost = async (options: {
     infoRenderMs: [],
     infoRenders: 0,
     infoSetStates: 0,
+    infoReports: 0,
   };
 
-  root.render(<Probe editor={editor} optimize={optimize} stats={stats} />);
+  root.render(<Probe editor={editor} arm={arm} stats={stats} />);
   await flushReact();
 
   const typeTimes: number[] = [];
@@ -321,7 +402,7 @@ export const measureReactCost = async (options: {
   container.remove();
 
   return {
-    optimize,
+    arm,
     keystrokes,
     moves,
     typeMs: summarize(typeTimes),
@@ -334,5 +415,6 @@ export const measureReactCost = async (options: {
     infoRenderMs: summarize(stats.infoRenderMs),
     infoRenders: stats.infoRenders,
     infoSetStates: stats.infoSetStates,
+    infoReports: stats.infoReports,
   };
 };

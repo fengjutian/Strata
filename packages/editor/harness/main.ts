@@ -114,18 +114,10 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
 const FRAME_TIMEOUT_MS = 32;
 
 const nextPacedFrame = () =>
-  new Promise<void>((resolve) => {
-    let settled = false;
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    requestAnimationFrame(finish);
-    setTimeout(finish, FRAME_TIMEOUT_MS);
-  });
+  Promise.race([
+    new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    new Promise<void>((resolve) => setTimeout(resolve, FRAME_TIMEOUT_MS)),
+  ]);
 
 /**
  * Waits for a real animation frame. Required where the measurement depends on the browser
@@ -752,27 +744,27 @@ const main = async () => {
   if (sectionEnabled("reactCost")) {
     const reactCost = [];
     for (const paragraphs of [50]) {
-      const currentEditor = createEditor(paragraphs);
+      const beforeEditor = createEditor(paragraphs);
       await nextPacedFrame();
-      const current = await measureReactCost({
-        editor: currentEditor,
-        optimize: false,
+      const before = await measureReactCost({
+        editor: beforeEditor,
+        arm: "before",
         keystrokes: 30,
         moves: 30,
       });
-      currentEditor.destroy();
+      beforeEditor.destroy();
 
-      const optimizedEditor = createEditor(paragraphs);
+      const afterEditor = createEditor(paragraphs);
       await nextPacedFrame();
-      const optimized = await measureReactCost({
-        editor: optimizedEditor,
-        optimize: true,
+      const after = await measureReactCost({
+        editor: afterEditor,
+        arm: "after",
         keystrokes: 30,
         moves: 30,
       });
-      optimizedEditor.destroy();
+      afterEditor.destroy();
 
-      reactCost.push({ paragraphs, current, optimized });
+      reactCost.push({ paragraphs, before, after });
     }
     payload.reactCost = reactCost;
   }

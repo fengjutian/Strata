@@ -54,9 +54,7 @@ export function StickyEditorToolbar(props: Props) {
       });
     // This runs on every editor transaction, and most transactions do not change any active state.
     // Keeping the previous object when nothing changed lets React end the update without rendering.
-    setActiveStates((previous) =>
-      areActiveStatesEqual(previous, newActiveStates) ? previous : newActiveStates
-    );
+    setActiveStates((previous) => (areActiveStatesEqual(previous, newActiveStates) ? previous : newActiveStates));
   }, [editorRef]);
 
   // useEffect to call updateActiveStates when isActive prop changes

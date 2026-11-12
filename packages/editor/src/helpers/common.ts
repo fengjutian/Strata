@@ -124,10 +124,7 @@ export const getParagraphCount = (editorState: EditorState | undefined) => {
  * keeps the previous object when the states are equal - React compares the state with `Object.is`
  * and ends the update without rendering.
  */
-export const areActiveStatesEqual = (
-  previous: Record<string, boolean>,
-  next: Record<string, boolean>
-): boolean => {
+export const areActiveStatesEqual = (previous: Record<string, boolean>, next: Record<string, boolean>): boolean => {
   const previousKeys = Object.keys(previous);
   const nextKeys = Object.keys(next);
 

@@ -52,6 +52,32 @@ const buildContent = (paragraphs: number) => {
   return html;
 };
 
+/**
+ * A document made of tables instead of paragraphs. Tables are the shape that breaks the paragraph
+ * assumptions: the table plugins have to fix the selection, the cell selection has to be
+ * normalized and every cell carries its own node tree.
+ */
+const buildTableContent = (tables: number, rows: number, columns: number) => {
+  let html = "";
+
+  for (let t = 0; t < tables; t++) {
+    html += "<table><tbody>";
+
+    for (let r = 0; r < rows; r++) {
+      html += "<tr>";
+      for (let c = 0; c < columns; c++) {
+        const tag = r === 0 ? "th" : "td";
+        html += `<${tag}><p>Table ${t} row ${r} column ${c}</p></${tag}>`;
+      }
+      html += "</tr>";
+    }
+
+    html += "</tbody></table>";
+  }
+
+  return html;
+};
+
 const lowlight = createLowlight(common);
 lowlight.register("ts", ts);
 
@@ -72,10 +98,10 @@ const DuplicateLowlightExtension = Extension.create({
   },
 });
 
-const createEditor = (paragraphs: number, extraExtensions: Extension[] = []) =>
+const createEditor = (paragraphs: number, extraExtensions: Extension[] = [], content?: string) =>
   new Editor({
     element: document.getElementById(HOST_ID) as HTMLElement,
-    content: buildContent(paragraphs),
+    content: content ?? buildContent(paragraphs),
     extensions: [
       ...CoreEditorExtensions({
         disabledExtensions: [],
@@ -595,6 +621,81 @@ const measureTransactions = async (editor: Editor, count: number) => {
   };
 };
 
+/**
+ * The position inside the n-th table cell, where a user actually types when they edit a table.
+ */
+const findCellPosition = (editor: Editor, target: number) => {
+  let seen = 0;
+  let position = 0;
+
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name !== "table_cell" && node.type.name !== "table_header") return;
+
+    seen += 1;
+    if (seen === target) {
+      // The cell holds a paragraph, and the cursor goes inside that paragraph.
+      position = pos + 2;
+      return false;
+    }
+
+    return undefined;
+  });
+
+  return position;
+};
+
+/**
+ * The cost of a keystroke in a document that is made of tables, next to the cost of a keystroke in
+ * a document with a comparable number of nodes.
+ *
+ * The paragraph document is the baseline the other measurements were taken on. Tables are a
+ * different shape: every cell carries its own node tree, the table plugins have to repair the
+ * selection after a change, and the cell selection has to be normalized on every transaction.
+ *
+ * Two positions are measured, because they are different: the start of the document, and a cell in
+ * the middle of the tables, which is where a user actually types.
+ */
+const measureTableHeavy = async (options: {
+  label: string;
+  content: string;
+  inCell?: boolean;
+}) => {
+  const { label, content, inCell } = options;
+
+  const editor = createEditor(0, [], content);
+  await nextPacedFrame();
+
+  let nodeCount = 0;
+  editor.state.doc.descendants(() => {
+    nodeCount += 1;
+  });
+
+  const typeTimes: number[] = [];
+  const position = inCell ? findCellPosition(editor, 100) : 1;
+
+  for (let i = 0; i < 30; i++) {
+    await nextPacedFrame();
+    const started = performance.now();
+    editor.commands.insertContentAt(position, "x");
+    typeTimes.push(performance.now() - started);
+  }
+
+  const profileEditor = createEditor(0, [], content);
+  await nextPacedFrame();
+  const top = profilePlugins(profileEditor, 50);
+  profileEditor.destroy();
+
+  editor.destroy();
+
+  return {
+    label,
+    nodes: nodeCount,
+    position,
+    typeMs: summarize(typeTimes),
+    top,
+  };
+};
+
 /* -------------------------------------------------------------------------- */
 /* Runs                                                                         */
 /* -------------------------------------------------------------------------- */
@@ -739,6 +840,28 @@ const main = async () => {
       profiles.push({ paragraphs, top });
     }
     payload.profiles = profiles;
+  }
+
+  if (sectionEnabled("tableHeavy")) {
+    const tableHeavy = [];
+
+    // The paragraph document is the baseline every other measurement was taken on.
+    tableHeavy.push(await measureTableHeavy({ label: "paragraphs-640", content: buildContent(640) }));
+    tableHeavy.push(
+      await measureTableHeavy({ label: "tables-10x8x4-start", content: buildTableContent(10, 8, 4) })
+    );
+    tableHeavy.push(
+      await measureTableHeavy({
+        label: "tables-10x8x4-in-cell",
+        content: buildTableContent(10, 8, 4),
+        inCell: true,
+      })
+    );
+    tableHeavy.push(
+      await measureTableHeavy({ label: "tables-20x8x4-start", content: buildTableContent(20, 8, 4) })
+    );
+
+    payload.tableHeavy = tableHeavy;
   }
 
   if (sectionEnabled("reactCost")) {

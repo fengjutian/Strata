@@ -31,6 +31,7 @@ import { CoreEditorExtensions, SideMenuExtension } from "@/extensions";
 import { LOWLIGHT_PLUGIN_MARKER, LowlightPlugin } from "@/extensions/code/lowlight-plugin";
 import { getParagraphCount } from "@/helpers/common";
 import { nodeDOMAtCoords } from "@/plugins/drag-handle";
+import { measureReactCost } from "./react-cost";
 import "./styles.css";
 
 const HOST_ID = "editor-host";
@@ -685,13 +686,47 @@ const main = async () => {
     profiles.push({ paragraphs, top });
   }
 
+  const reactCost = [];
+  for (const paragraphs of [50]) {
+    const currentEditor = createEditor(paragraphs);
+    await nextFrame();
+    const current = await measureReactCost({
+      editor: currentEditor,
+      optimize: false,
+      keystrokes: 30,
+      moves: 30,
+    });
+    currentEditor.destroy();
+
+    const optimizedEditor = createEditor(paragraphs);
+    await nextFrame();
+    const optimized = await measureReactCost({
+      editor: optimizedEditor,
+      optimize: true,
+      keystrokes: 30,
+      moves: 30,
+    });
+    optimizedEditor.destroy();
+
+    reactCost.push({ paragraphs, current, optimized });
+  }
+
   // Leave a visible editor behind so the page is not blank and real pointer input can be driven.
   const editor = createEditor(50);
   await scrollToTop();
   void editor;
 
   renderLive();
-  write({ lowlightAB, sideMenuAB, updatePath, serialization, documentInfo, profiles, diagnostics: runDiagnostics() });
+  write({
+    lowlightAB,
+    sideMenuAB,
+    updatePath,
+    serialization,
+    documentInfo,
+    profiles,
+    reactCost,
+    diagnostics: runDiagnostics(),
+  });
   (window as unknown as { __benchReady: boolean }).__benchReady = true;
 };
 

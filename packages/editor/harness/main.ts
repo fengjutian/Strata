@@ -24,8 +24,12 @@
 /* oxlint-disable import/no-unassigned-import -- the stylesheet is imported for its side effect */
 
 import { Editor, Extension } from "@tiptap/core";
+import type { JSONContent } from "@tiptap/core";
+import Collaboration from "@tiptap/extension-collaboration";
+import { prosemirrorJSONToYDoc } from "@tiptap/y-tiptap";
 import { common, createLowlight } from "lowlight";
 import ts from "highlight.js/lib/languages/typescript";
+import * as Y from "yjs";
 // editor internals
 import { CoreEditorExtensions, SideMenuExtension } from "@/extensions";
 import { LOWLIGHT_PLUGIN_MARKER, LowlightPlugin } from "@/extensions/code/lowlight-plugin";
@@ -98,33 +102,49 @@ const DuplicateLowlightExtension = Extension.create({
   },
 });
 
-const createEditor = (paragraphs: number, extraExtensions: Extension[] = [], content?: string) =>
+const coreExtensions = (provider?: never) => [
+  ...CoreEditorExtensions({
+    disabledExtensions: [],
+    editable: true,
+    enableHistory: false,
+    extendedEditorProps: {},
+    fileHandler: {} as never,
+    flaggedExtensions: [],
+    getEditorMetaData: (() => ({})) as never,
+    isTouchDevice: false,
+    mentionHandler: {
+      searchCallback: async () => ({ results: [] }),
+      renderComponent: () => null,
+      getMentionedEntityDetails: async () => null,
+    } as never,
+    placeholder: undefined,
+    showPlaceholderOnEmpty: false,
+    tabIndex: undefined,
+    provider,
+  }),
+  SideMenuExtension({ aiEnabled: true, dragDropEnabled: true }),
+];
+
+const createEditor = (
+  paragraphs: number,
+  extraExtensions: Extension[] = [],
+  content?: string | JSONContent,
+  element?: HTMLElement
+) =>
   new Editor({
-    element: document.getElementById(HOST_ID) as HTMLElement,
+    element: element ?? (document.getElementById(HOST_ID) as HTMLElement),
     content: content ?? buildContent(paragraphs),
-    extensions: [
-      ...CoreEditorExtensions({
-        disabledExtensions: [],
-        editable: true,
-        enableHistory: false,
-        extendedEditorProps: {},
-        fileHandler: {} as never,
-        flaggedExtensions: [],
-        getEditorMetaData: (() => ({})) as never,
-        isTouchDevice: false,
-        mentionHandler: {
-          searchCallback: async () => ({ results: [] }),
-          renderComponent: () => null,
-          getMentionedEntityDetails: async () => null,
-        } as never,
-        placeholder: undefined,
-        showPlaceholderOnEmpty: false,
-        tabIndex: undefined,
-        provider: undefined,
-      }),
-      SideMenuExtension({ aiEnabled: true, dragDropEnabled: true }),
-      ...extraExtensions,
-    ],
+    extensions: [...coreExtensions(), ...extraExtensions],
+  });
+
+/**
+ * A collaborative editor. The document comes from the Y.Doc, not from the editor itself, so the
+ * editor is created without content.
+ */
+const createCollaborativeEditor = (ydoc: Y.Doc, element: HTMLElement) =>
+  new Editor({
+    element,
+    extensions: [...coreExtensions(), Collaboration.configure({ document: ydoc, field: "default" })],
   });
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -772,6 +792,193 @@ const measureTableHeavy = async (options: { label: string; content: string; inCe
 };
 
 /* -------------------------------------------------------------------------- */
+/* Collaboration                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A second host element, so two editors can exist at the same time. The collaborative editor needs
+ * a peer to receive the updates it produces, otherwise the remote path is never exercised.
+ */
+const createHost = (id: string) => {
+  const host = document.createElement("div");
+  host.id = id;
+  host.style.cssText = "width: 800px; margin: 0 auto; min-height: 200px;";
+  document.body.appendChild(host);
+  return host;
+};
+
+/**
+ * A cheap checksum of an update, used to tell updates apart.
+ *
+ * Yjs hands out the encoded diff of every transaction. If two updates share a checksum they carry
+ * the same content, which is how a buffer that is reused between transactions shows up.
+ */
+const checksum = (bytes: Uint8Array) => {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i++) sum = (sum + bytes[i] * (i + 1)) % 99991;
+  return sum;
+};
+
+/**
+ * The cost of editing a document that is bound to a Y.Doc, next to the cost of editing the same
+ * document in a plain editor.
+ *
+ * Two peers are set up. The first one writes into its Y.Doc, the second one receives the updates.
+ * Both directions are measured, because they are paid by different people: the local write is paid
+ * by the person who types, the remote apply is paid by everybody else in the session.
+ */
+const measureCollaboration = async (paragraphs: number) => {
+  // The document both peers start from.
+  const source = createEditor(paragraphs);
+  const sourceJSON = source.getJSON();
+  const schema = source.schema;
+  source.destroy();
+
+  const ydocA = prosemirrorJSONToYDoc(schema, sourceJSON, "default");
+  const ydocB = new Y.Doc();
+
+  const editorA = createCollaborativeEditor(ydocA, createHost("collab-a"));
+  await nextPacedFrame();
+
+  // Bring the second peer up to the state of the first one. A full state update is what a client
+  // receives from the server when it joins a session.
+  //
+  // The order matters: syncing before the first editor rendered would leave the second peer with
+  // the state of the document as it was before the render, and the incremental updates that follow
+  // would reference structs the peer does not have. Yjs parks such an update as pending instead of
+  // applying it, and the measurement would silently measure nothing.
+  Y.applyUpdate(ydocB, Y.encodeStateAsUpdate(ydocA));
+
+  const editorB = createCollaborativeEditor(ydocB, createHost("collab-b"));
+  await nextPacedFrame();
+  await nextPacedFrame();
+
+  // The measurement is only meaningful when the content actually reached both editors. A Y.Doc that
+  // does not render leaves an empty editor behind, and every number below would be a no-op.
+  const contentFlowed = editorA.state.doc.childCount > 1 && editorB.state.doc.childCount > 1;
+
+  const updates: Uint8Array[] = [];
+  const updateChecksums: number[] = [];
+
+  // The collaboration plugin writes the changed document into the Y.Doc from a transaction, so the
+  // time spent inside that transaction is the cost of the collaboration binding.
+  const yjsWriteMs: number[] = [];
+  let writeStarted = 0;
+
+  const collect = (update: Uint8Array) => {
+    updates.push(update);
+    updateChecksums.push(checksum(update));
+  };
+  const beforeAll = () => {
+    writeStarted = performance.now();
+  };
+  const afterAll = () => {
+    yjsWriteMs.push(performance.now() - writeStarted);
+  };
+
+  ydocA.on("update", collect);
+  ydocA.on("beforeAllTransactions", beforeAll);
+  ydocA.on("afterAllTransactions", afterAll);
+
+  // --- the local direction: what the person who types pays -----------------
+  const collabTimes: number[] = [];
+
+  for (let i = 0; i < 30; i++) {
+    await nextPacedFrame();
+    const started = performance.now();
+    editorA.commands.insertContentAt(1, "x");
+    collabTimes.push(performance.now() - started);
+  }
+
+  ydocA.off("update", collect);
+  ydocA.off("beforeAllTransactions", beforeAll);
+  ydocA.off("afterAllTransactions", afterAll);
+
+  // --- the remote direction: what everybody else in the session pays -------
+  let remoteTransactions = 0;
+  const countTransaction = () => {
+    remoteTransactions += 1;
+  };
+  editorB.on("transaction", countTransaction);
+
+  const remoteTimes: number[] = [];
+  const updateBytes: number[] = [];
+  const fragmentBefore = ydocB.getXmlFragment("default").toString().length;
+  const textBeforeB = editorB.state.doc.textContent.length;
+
+  // The encoded size of the whole shared document, checked at three points. A binding that writes
+  // position bookkeeping into the shared document keeps growing it even when the content does not
+  // change, and that growth is what the server has to store.
+  const docSizeAfterApply: Array<{ after: number; bytes: number }> = [];
+
+  for (const [index, update] of updates.entries()) {
+    updateBytes.push(update.byteLength);
+    const started = performance.now();
+    Y.applyUpdate(ydocB, update);
+    remoteTimes.push(performance.now() - started);
+
+    if (index === 0 || index === 9 || index === updates.length - 1) {
+      docSizeAfterApply.push({ after: index + 1, bytes: Y.encodeStateAsUpdate(ydocB).byteLength });
+    }
+  }
+
+  await nextPacedFrame();
+
+  editorB.off("transaction", countTransaction);
+
+  const fragmentAfter = ydocB.getXmlFragment("default").toString().length;
+  const fragmentAfterA = ydocA.getXmlFragment("default").toString().length;
+  const textAfterB = editorB.state.doc.textContent.length;
+  const textA = editorA.state.doc.textContent.length;
+
+  // --- the control: the same edits in a plain editor -----------------------
+  const control = createEditor(paragraphs, [], sourceJSON, createHost("collab-control"));
+  await nextPacedFrame();
+
+  const controlTimes: number[] = [];
+
+  for (let i = 0; i < 30; i++) {
+    await nextPacedFrame();
+    const started = performance.now();
+    control.commands.insertContentAt(1, "x");
+    controlTimes.push(performance.now() - started);
+  }
+
+  const result = {
+    paragraphs,
+    contentFlowed,
+    docSize: {
+      collaborative: editorA.state.doc.content.size,
+      control: control.state.doc.content.size,
+    },
+    textLength: { peerA: textA, peerBBefore: textBeforeB, peerBAfter: textAfterB },
+    remoteSynced: textA === textAfterB,
+    localEditMs: summarize(collabTimes),
+    yjsWriteMs: summarize(yjsWriteMs),
+    controlEditMs: summarize(controlTimes),
+    remoteApplyMs: summarize(remoteTimes),
+    remote: {
+      transactions: remoteTransactions,
+      fragmentBefore,
+      fragmentAfter,
+      fragmentAfterA,
+      fragmentChanged: fragmentAfter !== fragmentBefore,
+      converged: fragmentAfter === fragmentAfterA,
+      docSizeAfterApply,
+    },
+    updateBytes: summarize(updateBytes),
+    updates: updates.length,
+    distinctUpdates: new Set(updateChecksums).size,
+  };
+
+  editorA.destroy();
+  editorB.destroy();
+  control.destroy();
+
+  return result;
+};
+
+/* -------------------------------------------------------------------------- */
 /* Runs                                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -933,6 +1140,14 @@ const main = async () => {
     tableHeavy.push(await measureTableHeavy({ label: "tables-20x8x4-start", content: buildTableContent(20, 8, 4) }));
 
     payload.tableHeavy = tableHeavy;
+  }
+
+  if (sectionEnabled("collaboration")) {
+    const collaboration = [];
+    for (const paragraphs of [50, 200, 1000]) {
+      collaboration.push(await measureCollaboration(paragraphs));
+    }
+    payload.collaboration = collaboration;
   }
 
   if (sectionEnabled("reactCost")) {
